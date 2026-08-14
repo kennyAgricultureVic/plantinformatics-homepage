@@ -35,5 +35,8 @@ I want to share some of preferences so we can be more aligned when we work toget
 
 ## Visaul and design work
 
-- Standing constrants: dark mode, true back (#000) background, white primary text. Information-dense, no decorative card/pill, no chrome, no light-grey subtitle lines above sections. Minimal copy. No em dashes.
+- Always build with an option for dark mode and give the user a toggle and sync with the user's settings
+- When choosing colours use ones that are suitable for dark mode
+- Avoid grey, go with true back (#000) background and white primary text for dark mode
+- No decorative card/pill, no chrome, no light-grey subtitle lines above sections. No em dashes.
 - Avoid continuously repainting CSS animations (pulse, shimmer, blur, spinners); they peg the GPU on high refrsh displays
