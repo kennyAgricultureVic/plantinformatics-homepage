@@ -1,0 +1,47 @@
+/* Superformula design: one-shot motion only. Everything settles and stops. */
+
+/* Outlines trace themselves once when their figure scrolls into view (pathLength="1" on the path). */
+.sf-trace path[pathLength] {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.sf-trace[data-seen="true"] path[pathLength] {
+  animation: sf-trace 1.6s cubic-bezier(0.3, 0, 0.2, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 120ms);
+}
+@keyframes sf-trace {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Shapes in a row appear one after another. */
+.sf-step > * {
+  opacity: 0;
+  transform: scale(0.6);
+}
+.sf-step[data-seen="true"] > * {
+  animation: sf-step 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes sf-step {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-trace path[pathLength] {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+  .sf-trace[data-seen="true"] path[pathLength],
+  .sf-step[data-seen="true"] > * {
+    animation: none;
+  }
+  .sf-step > * {
+    opacity: 1;
+    transform: none;
+  }
+}
