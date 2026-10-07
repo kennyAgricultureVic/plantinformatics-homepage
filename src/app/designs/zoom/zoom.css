@@ -1,0 +1,24 @@
+/* Narrow screens and no sticky lens: each section's own lens zooms in as it scrolls into view.
+   Pure CSS scroll-driven animation, so it only runs where supported and motion is welcome. */
+@keyframes zoom-frame-in {
+  from {
+    transform: scale(0.18);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.zoom-frame {
+  view-timeline: --zoom-frame block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .zoom-frame > .zoom-frame-scene {
+      animation: zoom-frame-in linear both;
+      animation-timeline: --zoom-frame;
+      animation-range: entry 0% cover 45%;
+    }
+  }
+}
