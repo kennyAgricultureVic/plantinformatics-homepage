@@ -1,0 +1,26 @@
+/* Utilitarian: system fonts, square corners, one strong focus ring. Scoped to .utilitarian. */
+.utilitarian {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.utilitarian * {
+  border-radius: 0 !important;
+}
+
+/* Palette colour 1 marks focus, backed by a foreground ring so it reads on any palette. */
+.utilitarian :focus-visible {
+  outline: 3px solid var(--p1);
+  outline-offset: 0;
+  box-shadow: 0 0 0 6px var(--foreground);
+}
+
+/* Links: text stays foreground for contrast, the underline carries palette colour 1. */
+.utilitarian .u-link {
+  text-decoration-line: underline;
+  text-decoration-color: var(--p1);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.utilitarian .u-link:hover {
+  text-decoration-thickness: 4px;
+}
