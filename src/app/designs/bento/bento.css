@@ -1,0 +1,83 @@
+/* Bento tiles. A tile sets --tone / --tone-fg to one palette slot; light mode floods the tile with it,
+   dark mode keeps the true black ground and uses the tone for the border and the figure highlight. */
+.bento-tile {
+  --g: var(--tone);
+  --f: var(--tone-fg);
+  background: var(--g);
+  color: var(--f);
+  --hairline-plate: var(--g);
+  --hairline-edge: var(--f);
+  --hairline-hi: var(--f);
+  --hairline-mid: color-mix(in oklab, var(--f) 62%, var(--g));
+  --hairline-lo: color-mix(in oklab, var(--f) 30%, var(--g));
+}
+
+.bento-tile.bento-plain {
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.dark .bento-tile {
+  --g: #000;
+  --f: #fff;
+  --accent: color-mix(in oklab, var(--tone) 78%, #fff);
+  box-shadow:
+    inset 0 4px 0 var(--accent),
+    inset 0 0 0 1px color-mix(in oklab, var(--accent) 55%, #000);
+  --hairline-hi: var(--accent);
+}
+
+.dark .bento-tile.bento-plain {
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.bento-muted {
+  color: color-mix(in oklab, var(--f) 72%, var(--g));
+}
+
+.bento-rule {
+  border-color: color-mix(in oklab, var(--f) 28%, var(--g));
+}
+
+/* Tile reflow: React's <ViewTransition> tags every tile with this class. */
+::view-transition-group(.bento-tile) {
+  animation-duration: 380ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: clip;
+  border-radius: 1rem;
+}
+
+::view-transition-old(.bento-tile),
+::view-transition-new(.bento-tile) {
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+  animation-duration: 220ms;
+}
+
+/* News ticker: the list is drawn twice and slides by one copy's width. */
+@keyframes bento-ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.bento-ticker {
+  animation: bento-ticker 60s linear infinite;
+}
+
+.bento-tile:hover .bento-ticker,
+.bento-tile:focus-within .bento-ticker {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(.bento-tile),
+  ::view-transition-old(.bento-tile),
+  ::view-transition-new(.bento-tile) {
+    animation-duration: 0s !important;
+  }
+
+  .bento-ticker {
+    animation: none;
+  }
+}

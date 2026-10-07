@@ -1,13 +1,10 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import { site } from "@/content";
+import { Bento } from "./_components/bento";
 
-// Placeholder until this design is built. See plans/eleven-more-designs.md for the brief.
-export default function Placeholder() {
-  return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-16">
-      <p>This design is in progress.</p>
-      <Link href="/" className="mt-4 inline-block underline underline-offset-4">
-        All designs
-      </Link>
-    </main>
-  );
+export const metadata: Metadata = { title: `Bento | ${site.name}` };
+
+// The homepage as a bento grid: mixed-size tiles that expand in place, with Hairline figures that wake on hover.
+export default function BentoDesign() {
+  return <Bento />;
 }
