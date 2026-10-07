@@ -1,0 +1,46 @@
+/* Stepped corners: the border loses its corner pixels, like a console UI frame. */
+.px-notch {
+  clip-path: polygon(
+    0 4px, 4px 4px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px,
+    100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%,
+    4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px)
+  );
+}
+
+.px-crisp {
+  image-rendering: pixelated;
+  shape-rendering: crispEdges;
+}
+
+/* Crops pop up in four frames rather than easing. */
+.px-grow {
+  animation: px-grow 0.6s steps(4, end) both;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+@keyframes px-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.px-twinkle {
+  animation: px-twinkle 1.6s steps(1, end) infinite;
+}
+
+@keyframes px-twinkle {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .px-grow,
+  .px-twinkle {
+    animation: none;
+  }
+}
