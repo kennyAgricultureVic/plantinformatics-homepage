@@ -1,0 +1,151 @@
+/**
+ * Lupin: a flower spike of nine stacked whorls rising from a palmate leaf of
+ * seven narrow leaflets. Each whorl is a ring of pea-like florets round the
+ * stem, smaller upward and closing into buds at the pointed tip. The pointer
+ * picks a whorl by its rest height on screen; its florets splay down and out
+ * from the stem, the neighbours less, staggered outwards from it. The slider
+ * is the stagger, in ms.
+ *
+ * Every part is an ellipsoid: the hull of samples on its surface, with one dim
+ * midline crease on the face toward the viewer. All parts are painted in one
+ * pass sorted by depth toward the camera, so nearer florets cover farther ones.
+ */
+const { Cam, clamp, fit, hull, lerp, open, poly, proj, rad, seg, tset, tval, tdone, tween, mk, pointer, register, disposer } = HL;
+
+const VIEW = [0.612, 0.612, 0.5];
+const N = 9, Z0 = 34, DZ = 9.5, TIP = 117, HUB = 14, LEAF = 21, LEAN = 9, LIT = 3;
+const FALL = [1, 0.45, 0.15, 0];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const add = (...vs) => [0, 1, 2].map((k) => vs.reduce((s, v) => s + v[k], 0));
+const mul = (v, s) => [v[0] * s, v[1] * s, v[2] * s];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const unit = (v) => mul(v, 1 / Math.hypot(...v));
+
+/** The stem's axis at height z: it leans a little toward +x as it rises. */
+const axis = (z) => { const t = (z / TIP) ** 2; return [LEAN * t, -LEAN * 0.3 * t, z]; };
+
+/** An ellipsoid at c with orthogonal semi-axis vectors a, b, n: its filled outline and a midline along a on the face of ±n toward the viewer. */
+function ellipsoid(P, c, a, b, n) {
+  const at = (x, y, z) => P(...add(c, mul(a, x), mul(b, y), mul(n, z)));
+  const pts = [];
+  for (let i = 0; i <= 8; i++) {
+    const th = (i / 8) * Math.PI, st = Math.sin(th), ct = Math.cos(th);
+    for (let j = 0; j < 14; j++) { const ph = (j / 14) * Math.PI * 2; pts.push(at(ct, st * Math.cos(ph), st * Math.sin(ph))); }
+  }
+  const side = dot(n, VIEW) >= 0 ? 0.92 : -0.92, mid = [];
+  for (let i = 1; i < 12; i++) { const s = -1 + (i / 12) * 2; mid.push(at(s * 0.88, 0, side * Math.sqrt(1 - s * s))); }
+  return { sil: poly(hull(pts)), cr: open(mid) };
+}
+
+/** A tapered stem piece from z0 to z1: a fill-only band and its two side lines, so stacked pieces join without seams. */
+function stemPiece(P, z0, z1, r0, r1) {
+  const side = [0.707, -0.707, 0], p0 = axis(z0), p1 = axis(z1);
+  const L0 = P(...add(p0, mul(side, -r0))), R0 = P(...add(p0, mul(side, r0)));
+  const L1 = P(...add(p1, mul(side, -r1))), R1 = P(...add(p1, mul(side, r1)));
+  return { sil: poly([L0, L1, R1, R0]), cr: seg(L0, L1) + seg(R0, R1) };
+}
+
+/** Whorl i's shape: height, ring radius, floret count and size, and its rest opening (lower whorls a little open, the top ones buds). */
+function whorl(i) {
+  const t = i / (N - 1);
+  return {
+    z: Z0 + i * DZ, r: lerp(5.4, 1.3, t), k: i < 4 ? 7 : i < 7 ? 6 : 5, phase: i * 0.55,
+    la: lerp(5.3, 2.4, t), wb: lerp(3.8, 1.8, t), wn: lerp(3.0, 1.5, t), rest: lerp(0.5, 0.02, t ** 0.8),
+  };
+}
+
+/** Floret j of whorl w at opening o (0 hugs the stem, 1 splays out and down): its centre and semi-axes. */
+function floret(w, j, o) {
+  const th = w.phase + (j / w.k) * Math.PI * 2, O = [Math.cos(th), Math.sin(th), 0], T = [-Math.sin(th), Math.cos(th), 0];
+  const phi = rad(lerp(12, 112, o)), L = add(mul([0, 0, 1], Math.cos(phi)), mul(O, Math.sin(phi)));
+  const base = add(axis(w.z), mul(O, w.r + 3.6 * o));
+  return { c: add(base, mul(L, w.la * 0.8)), a: mul(L, w.la), b: mul(T, w.wb), n: mul(unit(cross(L, T)), w.wn) };
+}
+
+function mount({ stage, svg, read }, value) {
+  const bag = disposer();
+  let stag = value;
+  const C = Cam(45, 0.5, 2.45);
+  fit(C, [[LEAF * 2, 0, HUB], [0, LEAF * 2, HUB], [-LEAF * 2, 0, HUB], [0, -LEAF * 2, HUB], [LEAF * 1.4, LEAF * 1.4, HUB], axis(TIP + 6)], 200, 166);
+  const P = proj(C);
+  const g = mk("g", {}, svg);
+  const parts = [];
+  const part = (cls, crCls = "nf lo") => { const grp = mk("g", {}, g); const p = { grp, sil: mk("path", { class: cls }, grp), cr: mk("path", { class: crCls }, grp), depth: 0 }; parts.push(p); return p; };
+  const set = (p, q, depth) => { p.sil.setAttribute("d", q.sil); p.cr.setAttribute("d", q.cr ?? ""); p.depth = depth; };
+
+  // the palmate leaf: seven narrow leaflets fanned round the hub, drooping a little at the tips
+  for (let j = 0; j < 7; j++) {
+    const th = rad(-20 + j * (360 / 7)), h = [Math.cos(th), Math.sin(th), 0], dr = rad(9);
+    const d = add(mul(h, Math.cos(dr)), [0, 0, -Math.sin(dr)]), T = [-h[1], h[0], 0];
+    const c = add(axis(HUB), mul(d, LEAF));
+    set(part("sil"), ellipsoid(P, c, mul(d, LEAF), mul(T, 3.4), mul(unit(cross(d, T)), 0.9)), dot(c, VIEW));
+  }
+  // the stem, in pieces between whorls, and the pointed bud at the tip
+  // short pieces, each sorted by its lower end, so front florets cover the stem and back ones hide behind it
+  const zs = [HUB - 1, Z0 - 6, ...Array.from({ length: 3 * (N - 1) + 1 }, (_, i) => Z0 + (i * DZ) / 3), TIP - 4];
+  for (let i = 0; i + 1 < zs.length; i++) {
+    const r = (z) => lerp(1.9, 0.7, z / TIP);
+    set(part("fo", "nf sil"), stemPiece(P, zs[i], zs[i + 1], r(zs[i]), r(zs[i + 1])), dot(axis(zs[i]), VIEW) - 0.5);
+  }
+  set(part("sil"), ellipsoid(P, axis(TIP + 1), [0.6, -0.2, 4.6], [1.3, 0, 0], [0, 1.3, 0]), dot(axis(TIP), VIEW));
+
+  const whorls = Array.from({ length: N }, (_, i) => {
+    const w = whorl(i);
+    return { ...w, tw: tween(0), florets: Array.from({ length: w.k }, () => part("sil")), drawn: NaN };
+  });
+
+  /** Redraws a whorl at its tweened lift, then re-stacks every part far to near. */
+  function drawWhorl(w, now) {
+    const lift = tval(w.tw, now);
+    if (lift === w.drawn) return false;
+    w.drawn = lift;
+    const o = clamp(lerp(w.rest, 1, lift), 0, 1);
+    w.florets.forEach((p, j) => { const f = floret(w, j, o); set(p, ellipsoid(P, f.c, f.a, f.b, f.n), dot(f.c, VIEW)); });
+    return true;
+  }
+  const restack = () => parts.slice().sort((p, q) => p.depth - q.depth).forEach((p) => g.appendChild(p.grp));
+
+  const B = register(stage, (_dt, now) => {
+    let moving = false, changed = false;
+    for (const w of whorls) { if (drawWhorl(w, now)) changed = true; if (!tdone(w.tw, now)) moving = true; }
+    if (changed) restack();
+    return moving;
+  });
+  bag.add(B.unregister);
+
+  // hit test: each whorl's REST centre on screen; the nearest in y, inside a band round the spike
+  const centres = whorls.map((w) => P(...axis(w.z)));
+  function hit([x, y]) {
+    let best = -1, bd = Infinity;
+    centres.forEach((c, i) => { const d = Math.abs(y - c[1]); if (d < bd && Math.abs(x - c[0]) < 34) { bd = d; best = i; } });
+    return bd <= DZ * 2.45 ? best : -1;
+  }
+
+  let act = null;
+  function setActive(a) {
+    if (a === act) return;
+    const now = performance.now(), from = a >= 0 ? a : act ?? 0;
+    act = a;
+    whorls.forEach((w, i) => {
+      const lift = a < 0 ? 0 : FALL[Math.min(Math.abs(i - a), 3)];
+      tset(w.tw, lift, now, Math.abs(i - from) * stag);
+      for (const p of w.florets) p.sil.classList.toggle("hi", i === (a < 0 ? LIT : a));
+    });
+    read.textContent = a < 0 ? "rest" : `whorl ${String(a + 1).padStart(2, "0")}`;
+    B.wake();
+  }
+
+  bag.add(pointer(stage, { move: (p) => setActive(hit(p)), leave: () => setActive(-1) }));
+  bag.add(() => svg.replaceChildren());
+  setActive(-1);
+
+  return { set: (v) => { stag = v; }, destroy: bag.dispose };
+}
+
+hairline({
+  name: "lupin",
+  means: "A lupin spike over its palmate leaf: the whorl under the pointer splays its florets open, its neighbours less.",
+  rules: [1, 2, 5, 6],
+  range: [0, 40, 90],
+  mount,
+});

@@ -1,0 +1,169 @@
+/**
+ * Barley: a small plot of six two-row barley plants. The pointer is a hand
+ * brushing through: projected onto the ground, it bows every plant away from
+ * it, the nearer the more, on two springs per plant (the bend's x and y). The
+ * stem bends progressively and the ear nods further along its tangent, each
+ * grain trailing a long awn. At rest the ears nod in a light breeze, one of
+ * them bright. The slider is the hand's reach, in world units.
+ *
+ * A grain is an ellipsoid: the hull of samples on its surface. Its ear's awns
+ * are drawn first, so the grains cover them.
+ */
+const {
+  Cam, clamp, facing, fit, hull, open, poly, prism, proj, rings, seg, unproj,
+  spring, stepS, mk, pointer, put, register, disposer, solid,
+} = HL;
+
+const H = 34, NECK = 9, NG = 10, GS = 1.55, GA = 2.6, GB = 1.45, GN = 1.25, AWN = 34, MAXA = 0.7, EMAX = 2.2;
+const XS = [0, 24, 48], YS = [0, 26], X0 = -14, X1 = 62, Y0 = -12, Y1 = 38, PB = 6;
+const VIEW = [0.612, 0.612, 0.5];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const add = (a, b, s = 1) => [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const unit = (a) => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+
+/** The share of the full bow at u reaches from the hand: 1 → .31 at 42% → .09 beyond, as Terrain's. */
+const falloff = (u) =>
+  u <= 0 ? 1 : u <= 0.417 ? 1 - (u / 0.417) * 0.6875 : u <= 1 ? 0.3125 - ((u - 0.417) / 0.583) * 0.2185 : 0.094;
+
+/** An ellipsoid at c with orthogonal semi-axis vectors a, b, n: its silhouette as a path string. */
+function ellipsoid(P, c, a, b, n) {
+  const pts = [P(...add(c, a)), P(...add(c, a, -1))];
+  for (const s of [-0.85, -0.55, -0.2, 0.2, 0.55, 0.85]) {
+    const r = Math.sqrt(1 - s * s);
+    for (let i = 0; i < 14; i++) {
+      const th = (i / 14) * Math.PI * 2;
+      pts.push(P(...add(add(add(c, a, s), b, r * Math.cos(th)), n, r * Math.sin(th))));
+    }
+  }
+  return poly(hull(pts));
+}
+
+/**
+ * One plant standing at (x, y), bent by the vector b (its length is the stem's
+ * angle at the top, in radians), its ear nodding by n0 on top of that: the
+ * stem's world points, the grains (centre and semi-axes) and the awns.
+ */
+function plant(x, y, b, n0) {
+  const th = Math.hypot(b[0], b[1]), d = th > 1e-6 ? [b[0] / th, b[1] / th] : [1, 0];
+  const stem = [];
+  for (let i = 0; i <= 8; i++) {
+    const s = i / 8, h = th > 1e-6 ? (1 - Math.cos(th * s)) / th : 0, v = th > 1e-6 ? Math.sin(th * s) / th : s;
+    stem.push([x + d[0] * H * h, y + d[1] * H * h, H * v]);
+  }
+  const E = [b[0] * 1.3 + n0[0], b[1] * 1.3 + n0[1]], el = Math.hypot(...E), e = Math.min(el, EMAX);
+  const de = el > 1e-6 ? [E[0] / el, E[1] / el] : d;
+  const u = [Math.sin(e) * de[0], Math.sin(e) * de[1], Math.cos(e)];
+  // the neck: a short arc turning from the stem's tangent to the ear's, so the ear nods rather than kinks
+  for (let i = 1; i <= 4; i++) {
+    const v = [b[0] + (de[0] * e - b[0]) * i / 4, b[1] + (de[1] * e - b[1]) * i / 4], t = Math.hypot(...v), q = stem[stem.length - 1];
+    const w = t > 1e-6 ? [Math.sin(t) * v[0] / t, Math.sin(t) * v[1] / t, Math.cos(t)] : [0, 0, 1];
+    stem.push(add(q, w, NECK / 4));
+  }
+  // both rows face the viewer; the bias keeps the side defined when the ear points at the camera
+  const sv = unit(add(cross(u, VIEW), [-0.707, 0.707, 0], 0.2));
+  const top = stem[stem.length - 1], grains = [], awns = [];
+  for (let k = 0; k < NG; k++) {
+    const sg = k % 2 ? 1 : -1, c = add(add(top, u, 2.2 + k * GS), sv, sg * 1.25);
+    const g = unit(add(u, sv, sg * 0.3)), gb = unit(add(sv, g, -dot(sv, g))), gn = cross(g, gb);
+    grains.push({ c, a: g.map((q) => q * GA), b: gb.map((q) => q * GB), n: gn.map((q) => q * GN) });
+    const tip = add(c, g, GA * 0.8);
+    awns.push([tip, add(tip, unit(add(u, sv, sg * 0.07)), AWN - k * 0.8)]);
+  }
+  grains.sort((p, q) => dot(p.c, VIEW) - dot(q.c, VIEW));
+  return { stem, grains, awns };
+}
+
+function mount({ stage, svg, read }, value) {
+  const bag = disposer();
+  let reach = value, over = null;
+
+  // six plants, painted back to front by x + y; each has its own breeze at rest
+  const REST = [[0.1, -0.2, 1.3], [0.24, -0.7, 1.9], [0.06, 0.1, 1.05], [0.16, -0.5, 1.45], [0.2, -0.45, 1.5], [0.12, 0.2, 1.2]];
+  const spots = [];
+  for (let j = 0; j < 2; j++) for (let i = 0; i < 3; i++) spots.push({ i, j, x: XS[i], y: YS[j] });
+  spots.sort((p, q) => p.x + p.y - q.x - q.y);
+
+  // the camera is fitted to every plant bowed as far as it goes, in eight directions
+  const C = Cam(45, 0.5, 2.2), fp = [[X0, Y0, -PB], [X1, Y1, -PB], [X1, Y0, -PB], [X0, Y1, -PB]];
+  spots.forEach((s, k) => {
+    const [m, a, nm] = REST[k], n0 = [nm * Math.cos(a), nm * Math.sin(a)];
+    for (let q = 0; q < 8; q++) {
+      const t = (q / 8) * Math.PI * 2, f = plant(s.x, s.y, [MAXA * Math.cos(t), MAXA * Math.sin(t)], n0);
+      fp.push(f.stem[8], ...f.awns.map((w) => w[1]));
+    }
+    const f = plant(s.x, s.y, [m * Math.cos(a), m * Math.sin(a)], n0);
+    fp.push(...f.awns.map((w) => w[1]));
+  });
+  fit(C, fp, 200, 166);
+  const P = proj(C), front = facing(C);
+
+  const g = mk("g", {}, svg);
+  const [pr, pi] = rings(X0, Y0, X1, Y1, 9, 2.2);
+  put(solid(g), prism(P, front, pr, pi, -PB, 0));
+  const plants = spots.map((s, k) => {
+    const [m, a, nm] = REST[k], grp = mk("g", {}, g);
+    const b0 = [m * Math.cos(a), m * Math.sin(a)];
+    return {
+      ...s, b0, n0: [nm * Math.cos(a), nm * Math.sin(a)], nm,
+      sx: spring(b0[0], { eps: 0.002 }), sy: spring(b0[1], { eps: 0.002 }), drawn: "",
+      stem: mk("path", { class: "nf sil" }, grp), awn: mk("path", { class: "nf" }, grp),
+      grains: Array.from({ length: NG }, () => mk("path", { class: "sil" }, grp)),
+    };
+  });
+
+  /** Redraws a plant from its springs, only when they moved. */
+  function draw(p) {
+    const key = p.sx.x.toFixed(4) + "," + p.sy.x.toFixed(4);
+    if (key === p.drawn) return;
+    p.drawn = key;
+    const f = plant(p.x, p.y, [p.sx.x, p.sy.x], p.n0);
+    p.stem.setAttribute("d", open(f.stem.map((q) => P(...q))));
+    p.awn.setAttribute("d", f.awns.map(([a, b]) => seg(P(...a), P(...b))).join(""));
+    f.grains.forEach((q, k) => p.grains[k].setAttribute("d", ellipsoid(P, q.c, q.a, q.b, q.n)));
+  }
+
+  const B = register(stage, (dt) => {
+    let m = false;
+    for (const p of plants) { if (stepS(p.sx, dt)) m = true; if (stepS(p.sy, dt)) m = true; draw(p); }
+    return m;
+  });
+  bag.add(B.unregister);
+
+  const lead = plants.reduce((a, b) => (b.nm > a.nm ? b : a));
+  /** Bows every plant away from the hand, or back to its breeze; the bright goes to the nearest ear. */
+  function retarget() {
+    const inside = over && over[0] > X0 - 8 && over[0] < X1 + 8 && over[1] > Y0 - 8 && over[1] < Y1 + 8;
+    const dist = (p) => Math.hypot(p.x - over[0], p.y - over[1]);
+    const pick = inside ? plants.reduce((a, b) => (dist(b) < dist(a) ? b : a)) : null;
+    for (const p of plants) {
+      if (!pick) { p.sx.t = p.b0[0]; p.sy.t = p.b0[1]; continue; }
+      const dx = p.x - over[0], dy = p.y - over[1], l = Math.hypot(dx, dy) || 1;
+      const ang = clamp(MAXA * falloff(l / reach), 0, MAXA);
+      p.sx.t = (dx / l) * ang; p.sy.t = (dy / l) * ang;
+    }
+    for (const p of plants) p.grains.forEach((el) => el.classList.toggle("hi", p === (pick ?? lead)));
+    read.textContent = pick ? `ear ${pick.i + 1}·${pick.j + 1}` : "rest";
+    B.wake();
+  }
+
+  bag.add(pointer(stage, {
+    move: (q) => { over = unproj(C, q[0], q[1], 0); retarget(); },
+    leave: () => { over = null; retarget(); },
+  }));
+  bag.add(() => svg.replaceChildren());
+  retarget();
+
+  return {
+    set: (v) => { reach = v; if (over) retarget(); },
+    destroy: bag.dispose,
+  };
+}
+
+hairline({
+  name: "barley",
+  means: "A plot of two-row barley: a hand brushing through bows the plants away, the nearer the more, and the long-awned ears nod.",
+  rules: [1, 3, 5, 6],
+  range: [18, 32, 52],
+  mount,
+});

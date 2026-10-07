@@ -8,7 +8,12 @@ export default function DesignIndex() {
     <main className="mx-auto w-full max-w-3xl px-6 py-16">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Homepage designs</h1>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <Link href="/hairline" className="text-sm text-muted-foreground hover:text-foreground">
+            Hairline figures
+          </Link>
+          <ThemeToggle />
+        </div>
       </header>
       <ul className="mt-10 divide-y border-y">
         {designs.map((d) => (

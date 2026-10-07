@@ -1,0 +1,162 @@
+/**
+ * Pea: a field pea pod lying on its side, its seam split open on a row of
+ * seven peas. The pea nearest the pointer (by its rest centre on screen) lifts
+ * out of the pod, and its neighbours roll aside along it, staggered outwards
+ * on the 700ms lift curve. A short stalk and a coiled tendril sit at the far
+ * end. The slider is the stagger, in ms.
+ *
+ * The pod is Riffle's tray made pointed: a lens-shaped rim ring over a
+ * narrower keel ring, its far half painted before the peas, its near wall after.
+ */
+const {
+  Cam, clamp, facing, fit, hull, open, poly, proj, ringAt, run,
+  tdone, tset, tval, tween, disposer, mk, place, pointer, register,
+} = HL;
+
+const N = 7, SP = 12, RS = [5, 5.6, 5.3, 6.1, 5.7, 5.2, 4.9], ROLL0 = [0.4, 2.1, 3.6, 1.2, 5.0, 2.8, 4.3];
+const L = 48, W = 11, H = 9, WT = 1.6, BOW = 5, LIFT = 17, SHIFT = 4.2;
+const VIEW = [0.612, 0.612, 0.5];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const LR = (pts) => (pts[0][0] <= pts[pts.length - 1][0] ? pts : pts.slice().reverse());
+
+/** The pod's centre line, bowed so the ends curve toward the viewer. */
+const bow = (x) => BOW * (x / L) ** 2;
+
+/** A pointed oval ring of half-length l and half-width w, as {u, v, nu, nv} samples with outward normals. */
+function lensRing(l, w, n = 64) {
+  const pts = [];
+  for (let k = 0; k < n; k++) {
+    const th = (k / n) * Math.PI * 2, s = Math.cos(th), u = l * s;
+    pts.push([u, bow(u) + Math.sign(Math.sin(th)) * w * (1 - s ** 4)]);
+  }
+  return pts.map(([u, v], k) => {
+    const a = pts[(k + n - 1) % n], b = pts[(k + 1) % n];
+    const tu = b[0] - a[0], tv = b[1] - a[1], m = Math.hypot(tu, tv) || 1;
+    return { u, v, nu: tv / m, nv: -tu / m };
+  });
+}
+
+/** The pod, which never moves: `far` before the peas, `near` after them; entries are [d, class]. */
+function pod(P, front) {
+  const top = lensRing(L, W), inner = lensRing(L - WT * 2, W - WT), keel = lensRing(L * 0.86, W * 0.5);
+  const iF = LR(ringAt(P, run(inner, front), H)), oT = LR(ringAt(P, run(top, front), H)), oB = LR(ringAt(P, run(keel, front), 0));
+  // a short stalk off the far tip, and a tendril coiling up from it
+  const st = [[-L + 3, bow(-L), H * 0.8], [-L - 3, bow(-L) - 0.5, H + 2], [-L - 8, bow(-L) - 2, H + 6]];
+  const tend = [], e = st[2];
+  for (let k = 0; k <= 60; k++) {
+    const t = k / 60, a = t * Math.PI * 2 * 2.6, r = 4.2 * (1 - 0.55 * t), ca = Math.cos(a) * r - 4.2, sa = Math.sin(a) * r;
+    tend.push(P(e[0] - 4 * t + ca * 0.7, e[1] - 9 * t - ca * 0.7 + sa * 0.3, e[2] + 14 * t + sa));
+  }
+  const far = [
+    [open(st.map((p) => P(...p))), "nf sil"],
+    [open(tend), "nf"],
+    [poly(hull(ringAt(P, keel, 0).concat(ringAt(P, top, H)))), "sil"],
+    [poly(ringAt(P, inner, H)), "nf"],
+  ];
+  const near = [
+    [poly([...iF, oT[oT.length - 1], ...oB.slice().reverse(), oT[0]]), "fo"],
+    [open(oT), "nf lo"],
+    [open(iF), "nf"],
+    [open([oT[0], ...oB, oT[oT.length - 1]]), "nf sil"],
+  ];
+  return { far, near };
+}
+
+/** The pea's hilum, a short scar on its skin, turned by how far the pea has rolled along x. */
+function hilum(P, c, r, roll) {
+  const d0 = [0.25, 0.75, 0.6], m = Math.hypot(...d0), cs = Math.cos(roll), sn = Math.sin(roll);
+  const turn = (d) => [d[0] * cs + d[2] * sn, d[1], -d[0] * sn + d[2] * cs];
+  const pts = [];
+  for (let k = -2; k <= 2; k++) {
+    const d = turn([d0[0] / m + k * 0.07, d0[1] / m - k * 0.05, d0[2] / m]), dm = Math.hypot(...d);
+    if (dot(d, VIEW) / dm < 0.25) return "";
+    pts.push(P(c[0] + (r * d[0]) / dm, c[1] + (r * d[1]) / dm, c[2] + (r * d[2]) / dm));
+  }
+  return open(pts);
+}
+
+function mount({ stage, svg, read }, value) {
+  const bag = disposer();
+  let stag = value;
+  const C = Cam(45, 0.5, 3.3);
+  const xs = RS.map((_, i) => (i - (N - 1) / 2) * SP);
+  fit(C, [[-L, bow(-L), 0], [L, bow(L), 0], [L, bow(L) + W, 0], [-L - 12, bow(-L) - 11, H + 26], [0, 0, 12 + LIFT], [xs[0], 0, 12 + LIFT]], 200, 166);
+  const P = proj(C), front = facing(C);
+  const paths = pod(P, front);
+
+  const g = mk("g", {}, svg);
+  for (const [d, cls] of paths.far) mk("path", { d, class: cls }, g);
+  const pg = mk("g", {}, g);
+  const peas = RS.map((r, i) => {
+    const grp = mk("g", {}, pg);
+    return {
+      r, x: xs[i], grp, dx: tween(0), z: tween(0), drawn: "",
+      sil: mk("ellipse", { rx: r * C.S, ry: r * C.S, class: "sil" }, grp), hil: mk("path", { class: "nf lo" }, grp),
+    };
+  });
+  for (const [d, cls] of paths.near) mk("path", { d, class: cls }, g);
+
+  const centre = (p, dx, z) => [p.x + dx, bow(p.x + dx), p.r + 1 + 5 * ((p.x + dx) / L) ** 2 + z];
+  let order = "";
+  const B = register(stage, (_dt, now) => {
+    let moving = false;
+    for (const [i, p] of peas.entries()) {
+      const dx = tval(p.dx, now), z = tval(p.z, now), key = dx.toFixed(3) + "," + z.toFixed(3);
+      if (!tdone(p.dx, now) || !tdone(p.z, now)) moving = true;
+      p.depth = dot(centre(p, dx, z), VIEW) + i * 1e-6;
+      if (key === p.drawn) continue;
+      p.drawn = key;
+      const c = centre(p, dx, z);
+      place(p.sil, P(...c));
+      p.hil.setAttribute("d", hilum(P, c, p.r, ROLL0[i] + dx / p.r));
+    }
+    // a lifted pea is nearer than its neighbours: keep the paint order by depth
+    const sorted = peas.slice().sort((a, b) => a.depth - b.depth), k = sorted.map((p) => p.x).join();
+    if (k !== order) { order = k; for (const p of sorted) pg.append(p.grp); }
+    return moving;
+  });
+  bag.add(B.unregister);
+
+  // hit: the pea whose REST centre is nearest the pointer's screen x, inside a band round the pod
+  const rest = peas.map((p) => P(...centre(p, 0, 0)));
+  const half = (rest[1][0] - rest[0][0]) * 0.75;
+  function hit([sx, sy]) {
+    let best = -1, bd = Infinity;
+    rest.forEach((c, i) => { const d = Math.abs(sx - c[0]); if (d < bd) { bd = d; best = i; } });
+    return best >= 0 && bd < half && Math.abs(sy - rest[best][1]) < 34 ? best : -1;
+  }
+
+  const lead = RS.indexOf(Math.max(...RS));
+  let act = null;
+  /** Lifts pea a (-1 settles them all); the neighbours roll aside, staggered outwards from it. */
+  function setActive(a) {
+    if (a === act) return;
+    const now = performance.now(), from = a >= 0 ? a : act ?? 0;
+    act = a;
+    peas.forEach((p, i) => {
+      const delay = Math.abs(i - from) * stag, gap = Math.abs(i - a);
+      const dx = a < 0 || i === a ? 0 : Math.sign(i - a) * clamp(SHIFT * 0.62 ** (gap - 1), 0, SHIFT);
+      tset(p.dx, dx, now, delay); tset(p.z, i === a ? LIFT : 0, now, delay);
+      p.sil.classList.toggle("hi", i === (a < 0 ? lead : a));
+    });
+    read.textContent = a < 0 ? "rest" : `pea ${a + 1}`;
+    B.wake();
+  }
+
+  bag.add(pointer(stage, { move: (p) => setActive(hit(p)), leave: () => setActive(-1) }));
+  bag.add(() => svg.replaceChildren());
+  setActive(-1);
+
+  return {
+    set: (v) => { stag = v; },
+    destroy: bag.dispose,
+  };
+}
+
+hairline({
+  name: "pea",
+  means: "A field pea pod split open on seven peas: the one under the pointer lifts out, and its neighbours roll aside in turn.",
+  rules: [1, 2, 5, 6],
+  range: [0, 45, 90],
+  mount,
+});

@@ -1,0 +1,169 @@
+/**
+ * Wheat: one upright ear of bread wheat on its stem, standing in a round base,
+ * with a flag leaf curving off the stem. The ear is fourteen plump spikelets
+ * stacked alternately left and right along the rachis, each a fan of three
+ * grains, its flat face toward the viewer. The pointer picks a spikelet by its
+ * rest height; it flares open and steps out, its neighbours less, staggered
+ * outwards from it. The slider is the stagger, in ms.
+ *
+ * A grain is an ellipsoid: the hull of samples on its surface, and the near
+ * half of its long meridian as the crease (the grain's furrow).
+ */
+const {
+  Cam, fit, hull, open, poly, proj, facing, rrect, prism, put, solid, run,
+  tween, tset, tval, tdone, mk, pointer, register, disposer,
+} = HL;
+
+const N = 14, H = 4.0, STEM = 38, BR = 14, BH = 6, LEAN = 0.12;
+const GL = 4.9, GW = 2.5, GD = 2.3;
+const VIEW = [0.612, 0.612, 0.5];
+
+const add = (...vs) => vs.reduce((p, q) => [p[0] + q[0], p[1] + q[1], p[2] + q[2]]);
+const mul = (v, s) => [v[0] * s, v[1] * s, v[2] * s];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+// The plant's frame: U up the ear (leaning toward screen right), L across its flat face, NF out of it toward the viewer.
+const F = [Math.SQRT1_2, -Math.SQRT1_2, 0];
+const U = add(mul([0, 0, 1], Math.cos(LEAN)), mul(F, Math.sin(LEAN)));
+const L = add(mul(F, Math.cos(LEAN)), mul([0, 0, 1], -Math.sin(LEAN)));
+const NF = cross(U, L);
+const E0 = add([0, 0, BH], mul(U, STEM));
+
+/** An ellipsoid at c with orthonormal axes a, b, n and semi-axes A, B, D: its outline the near half of its a–n meridian, and a short beak. */
+function ellipsoid(P, c, a, b, n, A, B, D) {
+  const at = (x, y, z) => P(...add(c, mul(a, x), mul(b, y), mul(n, z)));
+  const pts = [], mer = [];
+  for (let i = 0; i <= 8; i++) {
+    const u = -Math.PI / 2 + (i / 8) * Math.PI;
+    for (let j = 0; j < 16; j++) {
+      const v = (j / 16) * Math.PI * 2;
+      pts.push(at(A * Math.cos(u) * Math.cos(v), B * Math.cos(u) * Math.sin(v), D * Math.sin(u)));
+    }
+  }
+  for (let j = 0; j < 32; j++) {
+    const v = (j / 32) * Math.PI * 2, x = Math.cos(v), z = Math.sin(v);
+    const nrm = add(mul(a, x / A), mul(n, z / D));
+    mer.push({ p: at(A * x * 0.92, 0, D * z * 0.92), f: dot(nrm, VIEW) > 0 });
+  }
+  // the glume's short beak past the grain's tip: wheat has no long awns
+  return { sil: poly(hull(pts)), cr: open(run(mer, (q) => q.f).map((q) => q.p)) + open([at(A, 0, 0), at(A + 2.2, 0, 0)]) };
+}
+
+/** Spikelet i at flare f: its three grains as [centre, long axis], inner, outer, then the front one. */
+function grains(i, f) {
+  const s = i % 2 ? 1 : -1, side = mul(L, s);
+  const base = add(E0, mul(U, i * H + 1), mul(side, 0.3 + 4.5 * f));
+  const phi0 = 0.6 + 0.35 * f, sp = 0.36 + 0.38 * f;
+  return [-1, 1, 0].map((k) => {
+    const d = add(mul(U, Math.cos(phi0 + k * sp)), mul(side, Math.sin(phi0 + k * sp)));
+    return [add(base, mul(d, GL * 0.9), mul(NF, k === 0 ? 1.3 : 0)), d];
+  });
+}
+
+/** A tube between two world points: the hull of its two end circles. */
+function tube(P, p0, p1, r) {
+  const pts = [];
+  for (let j = 0; j < 16; j++) {
+    const v = (j / 16) * Math.PI * 2, o = add(mul(L, r * Math.cos(v)), mul(NF, r * Math.sin(v)));
+    pts.push(P(...add(p0, o)), P(...add(p1, o)));
+  }
+  return poly(hull(pts));
+}
+
+/** The flag leaf, off the stem and arching out to the left: its blade and midrib. */
+function leaf(P) {
+  const node = add([0, 0, BH], mul(U, 20), mul(NF, 1.5)), c = [], l = [], r = [];
+  for (let k = 0; k <= 24; k++) {
+    const t = k / 24, w = 3.4 * Math.pow(1 - t, 0.8) * Math.min(1, 0.35 + t * 5);
+    const at = (q) => add(node, mul(L, -46 * q), mul(U, 42 * q - 36 * q * q));
+    const p = at(t), tg = add(at(t + 0.01), mul(p, -1)), nl = cross(NF, tg), m = Math.hypot(...nl);
+    c.push(P(...p)); l.push(P(...add(p, mul(nl, w / m)))); r.push(P(...add(p, mul(nl, -w / m))));
+  }
+  return { sil: poly([...l, ...r.reverse()]), mid: open(c.slice(2, 22)) };
+}
+
+function mount({ stage, svg, read }, value) {
+  const bag = disposer();
+  let step = value;
+  const C = Cam(45, 0.5, 2.55);
+  const top = add(E0, mul(U, N * H + 9));
+  fit(C, [[-BR, -BR, 0], [BR, BR, 0], [BR, -BR, 0], [-BR, BR, 0], top, add(E0, mul(L, 17)), add(E0, mul(U, N * H), mul(L, -17)),
+    add([0, 0, BH], mul(U, 20), mul(L, -46), mul(U, 6))], 200, 166);
+  const P = proj(C), front = facing(C);
+  const g = mk("g", {}, svg);
+
+  // the base, the stem, the flag leaf and the rachis never move
+  const outer = rrect(-BR, -BR, BR, BR, BR, 14), inner = rrect(-BR + 1.6, -BR + 1.6, BR - 1.6, BR - 1.6, BR - 1.6, 14);
+  put(solid(g), prism(P, front, outer, inner, 0, BH));
+  mk("path", { d: tube(P, [0, 0, BH - 1], E0, 1.5), class: "sil" }, g);
+  const lf = leaf(P);
+  mk("path", { d: lf.sil, class: "sil" }, g);
+  mk("path", { d: lf.mid, class: "nf lo" }, g);
+  mk("path", { d: tube(P, E0, add(E0, mul(U, N * H + 2)), 0.9), class: "sil" }, g);
+
+  // rest: a natural flare, swelling a little above the middle of the ear, uneven
+  const rest = (i) => 0.06 + 0.22 * Math.exp(-((i - 7) ** 2) / 5) + 0.05 * Math.sin(i * 2.3);
+  const sps = [];
+  for (let i = 0; i < N; i++) {
+    const grp = mk("g", {}, g);
+    const els = [0, 1, 2].map(() => ({ sil: mk("path", { class: "sil" }, grp), cr: mk("path", { class: "nf lo" }, grp) }));
+    sps.push({ i, els, tw: tween(rest(i)), drawn: NaN, y: P(...add(E0, mul(U, i * H + 4)))[1], x: P(...add(E0, mul(U, i * H)))[0] });
+  }
+
+  function draw(sp, f) {
+    if (f === sp.drawn) return;
+    sp.drawn = f;
+    grains(sp.i, f).forEach(([c, d], k) => {
+      const b = cross(NF, d), q = ellipsoid(P, c, d, b, NF, GL, GW, GD);
+      sp.els[k].sil.setAttribute("d", q.sil);
+      sp.els[k].cr.setAttribute("d", q.cr);
+    });
+  }
+
+  const B = register(stage, (_dt, now) => {
+    let moving = false;
+    for (const sp of sps) { draw(sp, tval(sp.tw, now)); if (!tdone(sp.tw, now)) moving = true; }
+    return moving;
+  });
+  bag.add(B.unregister);
+
+  const lead = sps.reduce((a, b) => (rest(b.i) > rest(a.i) ? b : a)).i;
+  let act = null;
+  /** Opens spikelet a (-1 closes them all back to rest), staggered outwards from it, or from the one let go. */
+  function setActive(a) {
+    if (a === act) return;
+    const now = performance.now(), from = a >= 0 ? a : act ?? lead;
+    act = a;
+    for (const sp of sps) {
+      const d = Math.abs(sp.i - a);
+      tset(sp.tw, a < 0 ? rest(sp.i) : [1, 0.45, 0.15][d] ?? 0, now, Math.abs(sp.i - from) * step);
+      for (const e of sp.els) e.sil.classList.toggle("hi", sp.i === (a < 0 ? lead : a));
+    }
+    read.textContent = a < 0 ? "rest" : `spikelet ${String(a + 1).padStart(2, "0")}`;
+    B.wake();
+  }
+
+  /** The spikelet whose rest centre is nearest the pointer's height, when the pointer is within a band around the ear. */
+  function hit([x, y]) {
+    const sp = sps.reduce((a, b) => (Math.abs(b.y - y) < Math.abs(a.y - y) ? b : a));
+    return Math.abs(sp.x - x) < 36 && Math.abs(sp.y - y) < 18 ? sp.i : -1;
+  }
+
+  bag.add(pointer(stage, { move: (p) => setActive(hit(p)), leave: () => setActive(-1) }));
+  bag.add(() => svg.replaceChildren());
+  setActive(-1);
+
+  return {
+    set: (v) => { step = v; },
+    destroy: bag.dispose,
+  };
+}
+
+hairline({
+  name: "wheat",
+  means: "An ear of wheat: the spikelet under the pointer flares its three grains open, and its neighbours follow in turn.",
+  rules: [1, 2, 5, 9],
+  range: [0, 40, 90],
+  mount,
+});

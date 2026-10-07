@@ -1,0 +1,162 @@
+/**
+ * Chickpea: three puffy pods hang on short stalks from an arching twig. Each
+ * pod is an ellipsoid split into two valves along its long vertical plane,
+ * hinged on the bottom seam. The pod under the pointer swings its near valve
+ * down toward the viewer and its far valve a little away, showing the seed:
+ * a round chickpea with a pointed beak and a groove. Neighbours open less, in
+ * turn. At rest the middle pod is ajar and its seed peeks out. The slider is
+ * the widest gape, in degrees.
+ */
+const {
+  Cam, fillet, fit, hull, open, poly, proj, rad, tdone, tset, tval, tween, disposer, mk, pointer, register,
+} = HL;
+
+const SP = 54, A = 24, B = 15, CZ = 18, PED = 7, ARCH = 34, SR = 11, L = SP + A + 10;
+const R2 = Math.SQRT1_2, VLOC = [0, 0.866, 0.5]; // the view direction in a pod's own (u, n, w)
+const REST = [0, 0.55, 0], SHARE = [1, 0.34, 0.14]; // share of the gape: at rest, and by distance from the chosen pod
+const twigZ = (s) => ARCH * (1 - (s / L) ** 2);
+const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+
+/** Pod i's frame: world point of local (u along the row, n toward the viewer, w up) about its centre. */
+function frame(i) {
+  const s = (i - 1) * SP, z = twigZ(s) - PED - CZ;
+  return (u, n, w) => [(s + u) * R2 + n * R2, -(s + u) * R2 + n * R2, z + w];
+}
+
+/** Turns a local point about the bottom seam (n 0, w -CZ), the hinge, by th radians; negative swings toward the viewer. */
+const hinge = ([u, n, w], th) => [u, n * Math.cos(th) - (w + CZ) * Math.sin(th), n * Math.sin(th) + (w + CZ) * Math.cos(th) - CZ];
+
+/** One valve (side 1 near, -1 far) swung by th: its samples, its cut-edge rim, and whether the open side faces the viewer. */
+function valve(side, th) {
+  const pts = [], rim = [];
+  for (let a = 0; a <= 14; a++) {
+    const ph = (a / 14) * Math.PI;
+    for (let b = 0; b <= 8; b++) {
+      const ps = (b / 8 - 0.5) * Math.PI;
+      pts.push(hinge([A * Math.cos(ph), side * B * Math.sin(ph) * Math.cos(ps), CZ * Math.sin(ph) * Math.sin(ps)], th));
+    }
+  }
+  pts.push(hinge([A + 3.5, 0, 1.5], th)); // the pod's short pointed tip, half on each valve
+  // the lip: the cut edge, a unit inside the valve so it never doubles the silhouette
+  for (let a = 0; a <= 36; a++) rim.push(hinge([A * 0.95 * Math.cos((a / 36) * 2 * Math.PI), side, CZ * 0.92 * Math.sin((a / 36) * 2 * Math.PI)], th));
+  const bulge = [0, side * Math.cos(th), side * Math.sin(th)];
+  return { pts, rim, faces: dot3(bulge, VLOC) < 0 };
+}
+
+/** The seed, in a pod's local frame: a round body, a beak toward the stalk, and the groove on its visible side. */
+function seed() {
+  const c = [0, 0, -3], b = [-0.85, 0, 0.53];
+  // the groove's plane holds the beak and leans 30 degrees off the line of sight, so it reads as a curve over the face
+  const vb = dot3(VLOC, b), vp = VLOC.map((v, m) => v - vb * b[m]), k = [b[1] * vp[2] - b[2] * vp[1], b[2] * vp[0] - b[0] * vp[2], b[0] * vp[1] - b[1] * vp[0]];
+  const raw = vp.map((v, m) => v + 0.6 * k[m]), len = Math.hypot(...raw), e = raw.map((v) => v / len);
+  const at = (d, r) => [c[0] + d[0] * r, c[1] + d[1] * r, c[2] + d[2] * r];
+  const pts = [at(b, SR * 1.4)], groove = [];
+  for (let i = 0; i < 14; i++) for (let j = 1; j < 8; j++) {
+    const th = (i / 14) * 2 * Math.PI, ph = (j / 8) * Math.PI;
+    pts.push(at([Math.sin(ph) * Math.cos(th) * 1.05, Math.sin(ph) * Math.sin(th), Math.cos(ph)], SR));
+  }
+  for (let k = 0; k <= 16; k++) {
+    const t = 0.45 + (k / 16) * 2.3, d = [0, 1, 2].map((m) => Math.cos(t) * b[m] + Math.sin(t) * e[m]);
+    if (dot3(d, VLOC) > 0.08) groove.push(at(d, SR * (1 + 0.4 * Math.max(0, Math.cos(t)) ** 3)));
+  }
+  return { pts, groove };
+}
+
+/** The twig as a thin rounded band arching over the row. */
+function twig(P) {
+  const top = [], bot = [];
+  for (let k = 0; k <= 24; k++) {
+    const s = -L + (k / 24) * 2 * L, z = twigZ(s), h = 1.5 + 0.6 * (1 - Math.abs(s) / L);
+    top.push(P(s * R2, -s * R2, z + h));
+    bot.push(P(s * R2, -s * R2, z - h));
+  }
+  const ring = top.concat(bot.reverse());
+  return poly(fillet(ring, ring.map(() => 1.2)));
+}
+
+function mount({ stage, svg, read }, value) {
+  const bag = disposer();
+  let gape = value;
+
+  // fitted to every pod at the widest gape on the range, so nothing leaves the frame
+  const S = 2.1, C = Cam(45, 0.5, S);
+  const extreme = [[-L * R2, L * R2, 0], [L * R2, -L * R2, 0], [0, 0, ARCH + 2]];
+  for (let i = 0; i < 3; i++) {
+    const F = frame(i);
+    for (const p of valve(1, -rad(80)).pts.concat(valve(-1, rad(24)).pts)) extreme.push(F(...p));
+  }
+  fit(C, extreme, 200, 166);
+  const P = proj(C);
+
+  // far valves first, then the twig, which hangs in the pods' middle plane, then seeds and near valves
+  const back = mk("g", {}, svg), g = mk("g", {}, svg);
+  mk("path", { d: twig(P), class: "sil" }, g);
+  const sd = seed();
+  const pods = [0, 1, 2].map((i) => {
+    const F = frame(i), W = (p) => P(...F(...p)), s = (i - 1) * SP;
+    // the stalk: a short line from the twig down to the pod's top seam
+    mk("path", { d: open([P(s * R2, -s * R2, twigZ(s)), W([0, 0, CZ])]), class: "nf sil" }, g);
+    const farSil = mk("path", { class: "sil" }, back), farCr = mk("path", { class: "nf lo" }, back), grp = mk("g", {}, g);
+    const seedSil = mk("path", { d: poly(hull(sd.pts.map(W))), class: "sil" }, grp);
+    mk("path", { d: open(sd.groove.map(W)), class: "nf lo" }, grp);
+    const nearSil = mk("path", { class: "sil" }, grp), nearCr = mk("path", { class: "nf lo" }, grp);
+    return { W, farSil, farCr, seedSil, nearSil, nearCr, f: tween(REST[i]), drawn: NaN, cx: W([0, 0, 0])[0] };
+  });
+
+  /** Pod p opened to share f of the gape: the near valve swings toward the viewer, the far one a third as far away. */
+  function draw(p, f) {
+    if (f === p.drawn) return;
+    p.drawn = f;
+    const g0 = rad(gape * f), nv = valve(1, -g0), fv = valve(-1, g0 * 0.3);
+    p.farSil.setAttribute("d", poly(hull(fv.pts.map(p.W))));
+    p.farCr.setAttribute("d", fv.faces ? poly(fv.rim.map(p.W)) : "");
+    p.nearSil.setAttribute("d", poly(hull(nv.pts.map(p.W))));
+    p.nearCr.setAttribute("d", nv.faces ? poly(nv.rim.map(p.W)) : "");
+  }
+
+  const Bk = register(stage, (_dt, now) => {
+    let moving = false;
+    for (const p of pods) { draw(p, tval(p.f, now)); if (!tdone(p.f, now)) moving = true; }
+    return moving;
+  });
+  bag.add(Bk.unregister);
+
+  // hit test on the rest pose: the pod whose resting centre is nearest the pointer's screen x, inside a band
+  const yTop = P(0, 0, ARCH + 4)[1], yBot = pods[0].W([0, 0, -CZ])[1] + 30, half = SP * S / 2;
+  function hit([x, y]) {
+    if (y < yTop || y > yBot) return -1;
+    const i = pods.reduce((a, p, k) => (Math.abs(p.cx - x) < Math.abs(pods[a].cx - x) ? k : a), 0);
+    return Math.abs(pods[i].cx - x) < half ? i : -1;
+  }
+
+  let act = null;
+  /** Opens pod a (-1 closes all but the middle one, ajar); the stagger spreads out from the pod chosen or let go. */
+  function setActive(a) {
+    if (a === act) return;
+    const now = performance.now(), from = a >= 0 ? a : act ?? 1;
+    act = a;
+    pods.forEach((p, i) => {
+      tset(p.f, a < 0 ? REST[i] : SHARE[Math.abs(i - a)], now, Math.abs(i - from) * 45);
+      p.seedSil.classList.toggle("hi", i === (a < 0 ? 1 : a));
+    });
+    read.textContent = a < 0 ? "rest" : `pod ${a + 1}`;
+    Bk.wake();
+  }
+
+  bag.add(pointer(stage, { move: (p) => setActive(hit(p)), leave: () => setActive(-1) }));
+  bag.add(() => svg.replaceChildren());
+  setActive(-1);
+
+  return {
+    set: (v) => { gape = v; pods.forEach((p) => { p.drawn = NaN; }); Bk.wake(); },
+    destroy: bag.dispose,
+  };
+}
+
+hairline({
+  name: "chickpea",
+  means: "Three chickpea pods on a twig: the one under the pointer splits open to show its seed, and its neighbours part a little.",
+  rules: [1, 2, 5, 6],
+  range: [30, 55, 80],
+  mount,
+});
