@@ -1,0 +1,143 @@
+/* Isometric station: the world is drawn like a Hairline figure. Plates are filled, lines are single
+   non-scaling strokes in four weights of the page ink, and each zone takes one palette colour. */
+
+.iso-root {
+  --iso-hi: var(--foreground);
+  --iso-edge: color-mix(in oklab, var(--foreground) 72%, transparent);
+  --iso-mid: color-mix(in oklab, var(--foreground) 42%, transparent);
+  --iso-lo: color-mix(in oklab, var(--foreground) 20%, transparent);
+  --iso-ground: var(--background);
+  --iso-shade: #000;
+  --z1: var(--p1);
+  --z2: var(--p2);
+  --z3: var(--p3);
+  --z4: var(--p4);
+}
+
+.dark .iso-root {
+  --z1: color-mix(in oklab, var(--p1) 74%, #000);
+  --z2: color-mix(in oklab, var(--p2) 74%, #000);
+  --z3: color-mix(in oklab, var(--p3) 74%, #000);
+  --z4: color-mix(in oklab, var(--p4) 74%, #000);
+}
+
+/* Hairline figures standing in the field plots share the same inks, on the plot colour. */
+.iso-root .iso-figures {
+  --hairline-plate: var(--z1);
+  --hairline-hi: var(--iso-hi);
+  --hairline-edge: var(--iso-edge);
+  --hairline-mid: var(--iso-mid);
+  --hairline-lo: color-mix(in oklab, var(--foreground) 30%, transparent);
+  --hairline-stroke: 1;
+}
+
+.iso-world :is(path, polygon, line, circle) {
+  fill: var(--iso-ground);
+  stroke: var(--iso-mid);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  transition:
+    stroke 260ms cubic-bezier(0.5, 0, 0.1, 1),
+    fill 260ms cubic-bezier(0.5, 0, 0.1, 1);
+}
+
+/* A zone sets --z; its plates take it, with the two visible sides a little darker. */
+.iso-world .t {
+  fill: var(--z);
+}
+.iso-world .r {
+  fill: color-mix(in oklab, var(--z), var(--iso-shade) 12%);
+}
+.iso-world .l {
+  fill: color-mix(in oklab, var(--z), var(--iso-shade) 24%);
+}
+.iso-world .pale {
+  fill: color-mix(in oklab, var(--z) 30%, var(--iso-ground));
+}
+.iso-world .pale.r {
+  fill: color-mix(in oklab, var(--z) 40%, var(--iso-ground));
+}
+.iso-world .pale.l {
+  fill: color-mix(in oklab, var(--z) 50%, var(--iso-ground));
+}
+.iso-world .glass {
+  fill: color-mix(in oklab, var(--z) 22%, transparent);
+}
+.iso-world .ground-r {
+  fill: color-mix(in oklab, var(--iso-ground), var(--foreground) 6%);
+}
+.iso-world .ground-l {
+  fill: color-mix(in oklab, var(--iso-ground), var(--foreground) 11%);
+}
+.iso-world .nf {
+  fill: none;
+}
+.iso-world .fo {
+  stroke: none;
+}
+.iso-world .sil {
+  fill: none;
+  stroke: var(--iso-edge);
+}
+.iso-world .lo {
+  stroke: var(--iso-lo);
+}
+.iso-world .hi {
+  stroke: var(--iso-hi);
+}
+.iso-world .dash {
+  fill: none;
+  stroke: var(--iso-edge);
+  stroke-dasharray: 1 4;
+}
+.iso-world .dot {
+  stroke: none;
+  fill: var(--iso-hi);
+}
+
+/* Hover: a zone or an item lifts its outline to the bright stroke. */
+.iso-world .zone {
+  cursor: pointer;
+  outline: none;
+}
+.iso-world .zone:is(:hover, :focus-visible, [data-on]) .zone-sil,
+.iso-world .item:is(:hover, [data-on]) .sil {
+  stroke: var(--iso-hi);
+  stroke-width: 1.8;
+}
+.iso-world .item {
+  cursor: pointer;
+}
+.iso-world .item[data-on] .t {
+  fill: color-mix(in oklab, var(--z), var(--iso-ground) 35%);
+}
+
+/* Server lights blink unless the reader asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .iso-world .led {
+    animation: iso-led 2.4s steps(1) infinite;
+  }
+  .iso-world .led:nth-child(3n) {
+    animation-delay: -0.8s;
+  }
+  .iso-world .led:nth-child(3n + 1) {
+    animation-delay: -1.6s;
+  }
+}
+@keyframes iso-led {
+  50% {
+    fill: var(--iso-lo);
+  }
+}
+
+.iso-camera {
+  transform-origin: 0 0;
+  transition: transform 1100ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .iso-camera {
+    transition: none;
+  }
+}

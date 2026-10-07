@@ -1,13 +1,17 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import { PalettePicker, PaletteProvider } from "@/components/palette";
+import { site } from "@/content";
+import { Station } from "./_components/station";
 
-// Placeholder until this design is built. See plans/eleven-more-designs.md for the brief.
-export default function Placeholder() {
+export const metadata: Metadata = { title: `Isometric station | ${site.name}` };
+
+// One isometric research station drawn in the Hairline line style. Each zone takes one palette colour:
+// field plots --p1, lab --p2, seed store --p3, noticeboard --p4.
+export default function IsometricDesign() {
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-16">
-      <p>This design is in progress.</p>
-      <Link href="/" className="mt-4 inline-block underline underline-offset-4">
-        All designs
-      </Link>
-    </main>
+    <PaletteProvider design="isometric" defaultId={300} shortlist={[300, 260, 287, 282, 293, 264, 252, 274, 346]}>
+      <Station />
+      <PalettePicker />
+    </PaletteProvider>
   );
 }
