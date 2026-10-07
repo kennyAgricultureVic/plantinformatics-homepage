@@ -1,0 +1,23 @@
+/* Local to the lsystem design. Everything is scoped under .lsys. */
+
+/* --ink0..3: palette colours ordered from most to least contrast with the page background.
+   <Inks> writes the light-mode order to --l0..3 and the dark-mode order to --d0..3. */
+.lsys {
+  --ink0: var(--l0);
+  --ink1: var(--l1);
+  --ink2: var(--l2);
+  --ink3: var(--l3);
+}
+.dark .lsys {
+  --ink0: var(--d0);
+  --ink1: var(--d1);
+  --ink2: var(--d2);
+  --ink3: var(--d3);
+}
+
+.lsys .font-display {
+  font-family: var(--font-lsys-display), ui-sans-serif, sans-serif;
+}
+.lsys .font-grammar {
+  font-family: var(--font-lsys-grammar), ui-monospace, monospace;
+}
