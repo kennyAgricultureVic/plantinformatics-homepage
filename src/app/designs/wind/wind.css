@@ -1,0 +1,21 @@
+/* Contrast-ordered palette inks for HTML marks, switched with the theme. Set by <Inks>. */
+.wind-inks {
+  --wind-ink0: var(--wind-l0);
+  --wind-ink1: var(--wind-l1);
+  --wind-ink2: var(--wind-l2);
+  --wind-ink3: var(--wind-l3);
+  /* Inverted order, for marks on the footer's reversed ground. */
+  --wind-inv0: var(--wind-d0);
+  --wind-inv1: var(--wind-d1);
+  --wind-inv2: var(--wind-d2);
+}
+
+.dark .wind-inks {
+  --wind-ink0: var(--wind-d0);
+  --wind-ink1: var(--wind-d1);
+  --wind-ink2: var(--wind-d2);
+  --wind-ink3: var(--wind-d3);
+  --wind-inv0: var(--wind-l0);
+  --wind-inv1: var(--wind-l1);
+  --wind-inv2: var(--wind-l2);
+}
