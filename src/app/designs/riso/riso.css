@@ -1,0 +1,86 @@
+/* Risograph print effects for /designs/riso. Every class is prefixed riso- so nothing leaks. */
+
+/* Misregistration offsets, registered so the reprint animation can tween them. */
+@property --riso-mx {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 2px;
+}
+@property --riso-my {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: -1.5px;
+}
+
+.riso {
+  --riso-blend: multiply;
+}
+.dark .riso {
+  /* On black paper inks add light rather than absorb it. */
+  --riso-blend: screen;
+}
+
+/* A layer of ink: overprints whatever is beneath it. */
+.riso-ink {
+  mix-blend-mode: var(--riso-blend);
+}
+
+/* Second and third drum passes land slightly off the first. */
+.riso-shift {
+  transform: translate(var(--riso-mx), var(--riso-my));
+}
+.riso-shift-b {
+  transform: translate(calc(var(--riso-mx) * -0.8), calc(var(--riso-my) * -1.2));
+}
+
+/* Halftone dot screens in an ink, set with --riso-dot. */
+.riso-dots {
+  background-image: radial-gradient(circle at center, var(--riso-dot) 0 38%, transparent 42%);
+  background-size: 6px 6px;
+}
+.riso-dots-fine {
+  background-image: radial-gradient(circle at center, var(--riso-dot) 0 28%, transparent 32%);
+  background-size: 4px 4px;
+}
+
+/* Paper grain across the whole sheet: fractal noise, no image files. */
+.riso-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 7 -4.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.12;
+  mix-blend-mode: multiply;
+}
+.dark .riso-grain {
+  filter: invert(1);
+  mix-blend-mode: screen;
+  opacity: 0.1;
+}
+
+/* Rough cut edge for paper slabs. */
+.riso-cut {
+  clip-path: polygon(0 4%, 7% 0, 34% 3%, 61% 0, 100% 5%, 97% 38%, 100% 71%, 96% 100%, 62% 96%, 31% 100%, 3% 97%, 0 60%);
+}
+
+/* Palette change is a reprint: the drums wobble out of register and settle. */
+.riso-reprint {
+  animation: riso-reprint 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes riso-reprint {
+  0% {
+    --riso-mx: 16px;
+    --riso-my: -10px;
+  }
+  35% {
+    --riso-mx: -7px;
+    --riso-my: 5px;
+  }
+  100% {
+    --riso-mx: 2px;
+    --riso-my: -1.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .riso-reprint {
+    animation: none;
+  }
+}
