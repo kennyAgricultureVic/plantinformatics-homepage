@@ -1,0 +1,43 @@
+/* Local to the fern design. Everything is scoped under .fern. */
+
+/* --ink0..3: palette colours from most to least contrast with the ground.
+   <Inks> writes the light-mode order to --fern-l0..3 and the dark-mode order to --fern-d0..3. */
+.fern {
+  --ink0: var(--fern-l0);
+  --ink1: var(--fern-l1);
+  --ink2: var(--fern-l2);
+  --ink3: var(--fern-l3);
+  --ink-alt: var(--fern-lalt);
+}
+.dark .fern {
+  --ink0: var(--fern-d0);
+  --ink1: var(--fern-d1);
+  --ink2: var(--fern-d2);
+  --ink3: var(--fern-d3);
+  --ink-alt: var(--fern-dalt);
+}
+
+.fern .font-display {
+  font-family: var(--font-fern-display), ui-serif, Georgia, serif;
+  font-weight: 400;
+}
+
+/* Fiddleheads draw their stroke once when they first enter the page, then stay still. */
+@keyframes fern-unroll {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fern .fern-unroll {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+  .fern [data-seen] .fern-unroll {
+    animation: fern-unroll 1.6s cubic-bezier(0.3, 0.6, 0.3, 1) both;
+    animation-delay: var(--delay, 0ms);
+  }
+}
