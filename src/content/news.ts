@@ -1,6 +1,6 @@
 // News and updates, newest first. Sourced from sample-content.md.
 
-export type NewsKind = "tool" | "data" | "guide";
+export type NewsKind = "tool" | "data";
 
 export type NewsItem = {
   /** ISO date (YYYY-MM-DD). */
@@ -69,19 +69,13 @@ export const news = [
     date: "2024-11-01",
     kind: "data",
     title: "10+ Wheat Genomes",
-    body: "Added the 10+ Wheat Genomes with gene annotations and 40k mappings, plus User Story 3 on two decades of wheat yield QTLs on chromosome 7A.",
+    body: "Added the 10+ Wheat Genomes from Walkowiak et al. 2020, with de novo gene annotations (White et al. 2024) and Wheat Barley 40k v1.1 mappings.",
   },
   {
     date: "2024-10-23",
     kind: "tool",
     title: "Pretzel v3.0.0",
     body: "VCF Search use case and a range of improvements.",
-  },
-  {
-    date: "2024-09-17",
-    kind: "guide",
-    title: "User Story 2: stripe rust resistance",
-    body: "Filtering AGG wheat accessions for stripe rust resistance gene Yr34/Yr48.",
   },
   {
     date: "2024-08-23",

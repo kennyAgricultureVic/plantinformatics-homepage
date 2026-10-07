@@ -10,6 +10,8 @@ export type DataRelease = {
   doi: `https://doi.org/${string}`;
   /** ISO date (YYYY-MM-DD). */
   released: string;
+  /** Set when a later release of the same crop includes all of these accessions. */
+  superseded?: true;
 };
 
 export const dataReleases = [
@@ -19,12 +21,15 @@ export const dataReleases = [
   { crop: "Lentil", accessions: 6_308, assembly: "CDC Redberry (Lcu.2RBY)", doi: "https://doi.org/10.7910/DVN/T0TDAS", released: "2025-08-14" },
   { crop: "Chickpea", accessions: 1_813, assembly: "CDC Frontier gnm3", doi: "https://doi.org/10.7910/DVN/ECQ4NC", released: "2025-08-14" },
   { crop: "Chickpea", accessions: 11_071, assembly: "CDC Frontier gnm3", doi: "https://doi.org/10.7910/DVN/SQFKJW", released: "2025-01-16" },
-  { crop: "Wheat", accessions: 12_606, assembly: "IWGSC RefSeq v2.1", doi: "https://doi.org/10.7910/DVN/CRSI0B", released: "2024-08-23" },
-  { crop: "Barley", accessions: 13_989, assembly: "Morex v3", doi: "https://doi.org/10.7910/DVN/H6SNVM", released: "2024-08-15" },
+  { crop: "Wheat", accessions: 12_606, assembly: "IWGSC RefSeq v2.1", doi: "https://doi.org/10.7910/DVN/CRSI0B", released: "2024-08-23", superseded: true },
+  { crop: "Barley", accessions: 13_989, assembly: "Morex v3", doi: "https://doi.org/10.7910/DVN/H6SNVM", released: "2024-08-15", superseded: true },
 ] as const satisfies readonly DataRelease[];
 
-/** Total accessions across all releases, for headline stats. */
-export const totalAccessions = dataReleases.reduce((sum, r) => sum + r.accessions, 0);
+/** Unique accessions across all releases, for headline stats. Skips superseded releases so nothing is counted twice. */
+export const totalAccessions = dataReleases.reduce((sum, r) => ("superseded" in r ? sum : sum + r.accessions), 0);
+
+/** Crops with at least one release. */
+export const crops = [...new Set(dataReleases.map((r) => r.crop))];
 
 /** Marker mappings and in-silico calls that keep datasets comparable across assemblies. */
 export const standards = [

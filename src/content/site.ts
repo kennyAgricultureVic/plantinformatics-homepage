@@ -1,20 +1,24 @@
 // Organisation-level copy shared by every design. Edit wording here, not in designs.
 
+import { crops, totalAccessions } from "./data";
+import { formatNumber } from "./format";
+import { tools } from "./tools";
+
 export const site = {
   name: "Plant Informatics",
   tagline: "Open digital tools and genotype data for the Australian grains industry",
   summary:
-    "We are a state government team supporting the Australian grains industry through digital tools and genotype data, with the Australian Grains Genebank (AGG) at the centre. Our integrated tool ecosystem and shared data standard connect AGG data to past, present and future pre-breeding projects.",
+    "We are a Victorian Government team supporting the Australian grains industry through open digital tools and genotype data, with the Australian Grains Genebank (AGG) at the centre. As the largest agricultural genotyping effort in the world, we connect AGG data to past, present and future pre-breeding projects.",
   goal: "Bridge the gap between bioinformatics and breeding, so industry can make decisions on data that is easy to access and use.",
   objectives: [
     "Release AGG genotype data publicly, anchored to documented reference assemblies",
     "Build open source tools that make that data explorable without bioinformatics expertise",
-    "Keep datasets interoperable through a shared data standard and remapping as new genomes arrive",
+    "Keep datasets comparable by remapping markers as new genome assemblies arrive",
   ],
   stats: [
-    { value: "80,000+", label: "Genotypes released publicly" },
-    { value: "6", label: "Crops covered" },
-    { value: "4", label: "Open tools" },
+    { value: formatNumber(totalAccessions), label: "Genotypes released publicly" },
+    { value: String(crops.length), label: "Crops released" },
+    { value: String(tools.length), label: "Open source tools" },
   ],
   github: "https://github.com/plantinformatics",
 } as const;
