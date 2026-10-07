@@ -4,3 +4,4 @@ export * from "./tools";
 export * from "./data";
 export * from "./news";
 export * from "./format";
+export * from "./wada";

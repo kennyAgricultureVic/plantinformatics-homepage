@@ -3,7 +3,7 @@ import Image from "next/image";
 import { ArrowUpRightIcon } from "lucide-react";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Badge } from "@/components/ui/badge";
+import { PalettePicker, PaletteProvider } from "@/components/palette";
 import {
   dataReleases,
   formatDate,
@@ -22,7 +22,7 @@ export const metadata: Metadata = { title: `Starter | ${site.name}` };
 // so new designs can copy this folder and restyle freely.
 export default function StarterDesign() {
   return (
-    <>
+    <PaletteProvider design="starter" defaultId={44} shortlist={[44, 105, 176, 233, 260, 302, 331]}>
       <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-6">
           <a href="#about" className="font-semibold">
@@ -47,7 +47,7 @@ export default function StarterDesign() {
           <dl className="mt-12 grid gap-8 sm:grid-cols-3">
             {site.stats.map((s) => (
               <div key={s.label}>
-                <dd className="text-4xl font-semibold">{s.value}</dd>
+                <dd className="border-l-4 border-(--p1) pl-3 text-4xl font-semibold">{s.value}</dd>
                 <dt className="mt-1 text-sm text-muted-foreground">{s.label}</dt>
               </div>
             ))}
@@ -140,7 +140,10 @@ export default function StarterDesign() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium">{n.title}</h3>
-                    <Badge variant="outline">{n.kind}</Badge>
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className={n.kind === "tool" ? "size-2 bg-(--p2)" : "size-2 bg-(--p3)"} />
+                      {n.kind === "tool" ? "Tool release" : "Data release"}
+                    </span>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{n.body}</p>
                 </div>
@@ -156,6 +159,7 @@ export default function StarterDesign() {
           <p className="mt-4">{funding.partners.join(" · ")}</p>
         </div>
       </footer>
-    </>
+      <PalettePicker />
+    </PaletteProvider>
   );
 }
