@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useInks } from "./inks";
+import { useWindLines } from "./wind-lines";
 import { windField, type Stem, type Streamline } from "./wind";
 
 type WindCanvasProps = {
@@ -61,6 +62,7 @@ export function WindCanvas({
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [visible, setVisible] = useState(false);
   const inks = useInks();
+  const showLines = useWindLines();
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -130,7 +132,7 @@ export function WindCanvas({
       .toSorted((a, b) => a.depth - b.depth);
 
     // Streamlines traced with fixed steps; the wind runs faster where |w| is larger.
-    const traced = lines.map((l) => {
+    const traced = (showLines ? lines : []).map((l) => {
       const points: number[] = [];
       let x = l.x * w;
       let y = l.y * h;
@@ -281,7 +283,7 @@ export function WindCanvas({
       target?.removeEventListener("pointermove", onMove);
       target?.removeEventListener("pointerleave", onLeave);
     };
-  }, [size, visible, inks, stems, lines, speed, seed, stemHeight, rows, weight, lineAlpha, lineWidth, gusty, fieldFrom]);
+  }, [size, visible, inks, showLines, stems, lines, speed, seed, stemHeight, rows, weight, lineAlpha, lineWidth, gusty, fieldFrom]);
 
   return (
     <div ref={wrapRef} className={cn("relative w-full", className)}>
