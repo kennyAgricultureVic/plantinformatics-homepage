@@ -98,11 +98,11 @@ export function SiteNav() {
   }, [open]);
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-30 px-4 pt-4">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-30 mx-auto max-w-7xl px-4 pt-4 sm:px-6">
       <div
         ref={cardRef}
         className={cn(
-          "pointer-events-auto mx-auto max-w-[680px] rounded-[14px] border px-2 backdrop-blur-md transition-[background-color,border-color,box-shadow] duration-200 ease-out",
+          "pointer-events-auto rounded-[14px] border px-2 backdrop-blur-md transition-[background-color,border-color,box-shadow] duration-200 ease-out",
           lifted || open
             ? "border-border bg-background/80 shadow-[0_8px_24px_-8px_rgb(0_0_0/0.18)]"
             : "border-transparent bg-background/60",
