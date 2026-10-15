@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ArrowUpRightIcon } from "lucide-react";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { PalettePicker, PaletteProvider } from "@/components/palette";
+import { cn } from "@/lib/utils";
 import {
   dataReleases,
   formatDate,
@@ -280,7 +281,7 @@ export default function Home() {
               </SectionTitle>
               <p className="mt-6 max-w-2xl text-muted-foreground">
                 Each release is a drill row of the same length with one stem per{" "}
-                {ACCESSIONS_PER_STEM} accessions. Superseded releases are drawn faint: their accessions
+                {ACCESSIONS_PER_STEM} accessions. Superseded releases are greyed out: their accessions
                 are counted again in the later release.
               </p>
               <ol className="mt-10 grid">
@@ -289,7 +290,10 @@ export default function Home() {
                   return (
                     <li
                       key={r.doi}
-                      className="grid items-end gap-x-8 gap-y-3 border-b border-foreground/15 py-5 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,9rem)]"
+                      className={cn(
+                        "grid items-end gap-x-8 gap-y-3 border-b border-foreground/15 py-5 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,9rem)]",
+                        superseded && "opacity-35 grayscale",
+                      )}
                     >
                       <div>
                         <h3 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
@@ -303,7 +307,7 @@ export default function Home() {
                           {formatDate(r.released)} · {r.assembly}
                         </p>
                       </div>
-                      <div className={superseded ? "opacity-35" : undefined}>
+                      <div>
                         <ReleaseField index={i} />
                       </div>
                       <div className="md:text-right">
@@ -406,7 +410,17 @@ export default function Home() {
                               </span>
                             </p>
                             <h3 className="mt-1 text-2xl leading-tight font-bold tracking-tight">
-                              {n.title}
+                              {"url" in n ? (
+                                <a
+                                  href={n.url}
+                                  className="inline-flex items-center gap-1 underline-offset-4 hover:underline"
+                                >
+                                  {n.title}
+                                  <ArrowUpRightIcon className="size-5" />
+                                </a>
+                              ) : (
+                                n.title
+                              )}
                             </h3>
                             <p className="mt-2 max-w-2xl leading-relaxed text-muted-foreground">
                               {n.body}
@@ -418,10 +432,48 @@ export default function Home() {
                 ))}
               </div>
             </section>
+
           </main>
 
-          <footer className="bg-foreground text-background">
-            <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <footer id="contact" className="bg-foreground text-background">
+            <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
+              <h2 className="text-6xl leading-[0.85] font-extrabold tracking-tighter sm:text-8xl">
+                {site.contact.heading}
+              </h2>
+              <p className="mt-6 max-w-2xl text-lg opacity-75">
+                {site.contact.intro}
+              </p>
+              <ul className="mt-10 grid gap-5">
+                {site.contact.emails.map((email) => (
+                  <li key={email}>
+                    <a
+                      href={`mailto:${email}`}
+                      className="group inline-flex items-center gap-2 text-xl font-bold tracking-tight break-words underline decoration-2 underline-offset-8 decoration-(--wind-inv0) sm:text-4xl"
+                    >
+                      <span>
+                        {email.split("@")[0]}@<wbr />
+                        {email.split("@")[1]}
+                      </span>
+                      <ArrowUpRightIcon className="size-6 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 sm:size-8" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-12 max-w-2xl opacity-75">{site.contact.issues}</p>
+              <ul className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
+                {tools.map((t) => (
+                  <li key={t.slug}>
+                    <a
+                      href={`${site.github}/${t.slug}/issues`}
+                      className="inline-flex items-center gap-1 border-b-2 border-background pb-0.5 text-sm font-bold"
+                    >
+                      {t.name} <ArrowUpRightIcon className="size-4" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="mx-auto grid max-w-7xl gap-8 border-t border-background/20 px-4 py-14 sm:px-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
               <p className="text-2xl leading-snug font-semibold tracking-tight">
                 {funding.acknowledgement}
               </p>
