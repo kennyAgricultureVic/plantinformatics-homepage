@@ -19,8 +19,8 @@ export const dataReleases = [
   { crop: "Barley", accessions: 27_242, assembly: "Morex v3", doi: "https://doi.org/10.7910/DVN/LXU0WD", released: "2026-06-17" },
   { crop: "Field pea", accessions: 5_635, assembly: "Cameor v2", doi: "https://doi.org/10.7910/DVN/A6WGYS", released: "2025-09-08" },
   { crop: "Lentil", accessions: 6_308, assembly: "CDC Redberry (Lcu.2RBY)", doi: "https://doi.org/10.7910/DVN/T0TDAS", released: "2025-08-14" },
-  { crop: "Chickpea", accessions: 1_813, assembly: "CDC Frontier gnm3", doi: "https://doi.org/10.7910/DVN/ECQ4NC", released: "2025-08-14" },
-  { crop: "Chickpea", accessions: 11_071, assembly: "CDC Frontier gnm3", doi: "https://doi.org/10.7910/DVN/SQFKJW", released: "2025-01-16" },
+  { crop: "Chickpea", accessions: 12_884, assembly: "CDC Frontier gnm3", doi: "https://doi.org/10.7910/DVN/ECQ4NC", released: "2025-08-14" },
+  { crop: "Chickpea", accessions: 11_071, assembly: "CDC Frontier gnm3", doi: "https://doi.org/10.7910/DVN/SQFKJW", released: "2025-01-16", superseded: true },
   { crop: "Wheat", accessions: 12_606, assembly: "IWGSC RefSeq v2.1", doi: "https://doi.org/10.7910/DVN/CRSI0B", released: "2024-08-23", superseded: true },
   { crop: "Barley", accessions: 13_989, assembly: "Morex v3", doi: "https://doi.org/10.7910/DVN/H6SNVM", released: "2024-08-15", superseded: true },
 ] as const satisfies readonly DataRelease[];
