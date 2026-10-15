@@ -8,8 +8,8 @@ export type Tool = {
   description: string;
   capabilities: readonly string[];
   url: string;
-  /** Path under /public. Undefined means no screenshot yet: render <ImagePlaceholder />. */
-  image?: string;
+  /** Screenshot under /public with its pixel size. Undefined means no screenshot yet: render <ImagePlaceholder />. */
+  image?: { src: string; width: number; height: number };
 };
 
 export const tools = [
@@ -27,6 +27,7 @@ export const tools = [
       "Links to the Crop Ontology API for QTL trait definitions",
     ],
     url: "https://agg.plantinformatics.io/",
+    image: { src: "/pretzel.png", width: 1437, height: 923 },
   },
   {
     slug: "genolink",
@@ -41,6 +42,7 @@ export const tools = [
       "Exposes an API other tools build on",
     ],
     url: "https://genolink.plantinformatics.io/",
+    image: { src: "/genolink.webp", width: 2000, height: 956 },
   },
   {
     slug: "fairybread",
@@ -56,7 +58,7 @@ export const tools = [
       "Share specific views by URL",
     ],
     url: "https://fairybread.plantinformatics.io/",
-    image: "/fairybread.png",
+    image: { src: "/fairybread.png", width: 1421, height: 876 },
   },
   {
     slug: "brioche",

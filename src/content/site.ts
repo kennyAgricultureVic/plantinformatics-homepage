@@ -7,6 +7,8 @@ import { tools } from "./tools";
 export const site = {
   name: "Plant Informatics",
   tagline: "Open digital tools and genotype data for the Australian grains industry",
+  /** Phrases of the tagline a design may pick out in colour. */
+  taglineAccents: ["digital tools", "genotype data"],
   summary:
     "We are a Victorian Government team supporting the Australian grains industry through open digital tools and genotype data, with the Australian Grains Genebank (AGG) at the centre. As the largest agricultural genotyping effort in the world, we connect AGG data to past, present and future pre-breeding projects.",
   goal: "Bridge the gap between bioinformatics and breeding, so industry can make decisions on data that is easy to access and use.",
@@ -21,6 +23,8 @@ export const site = {
     { value: String(tools.length), label: "Open source tools" },
   ],
   github: "https://github.com/plantinformatics",
+  /** Every AGG genotype release, on Harvard Dataverse. */
+  dataverse: "https://dataverse.harvard.edu/dataverse/australiangrainsgenebank",
 } as const;
 
 /**
