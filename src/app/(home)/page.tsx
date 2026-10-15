@@ -27,6 +27,8 @@ import {
   type Slot,
 } from "./_components/wind";
 
+/** The tagline split around its accent phrases, keeping them as their own parts. */
+const taglineParts = site.tagline.split(new RegExp(`(${site.taglineAccents.join("|")})`));
 const newsYears = [...new Set(news.map((n) => n.date.slice(0, 4)))].toSorted();
 const newsYearsDesc = newsYears.toReversed();
 const newsKinds = [
@@ -56,27 +58,47 @@ function NewsNode({ kind }: { kind: "tool" | "data" }) {
   );
 }
 
-/** Section heading with the number behind it. */
+/** Section heading with the number behind it, linking to where those things live when there is a place. */
 function SectionTitle({
   children,
   value,
   unit,
+  href,
 }: {
   children: ReactNode;
   value: number;
   unit: string;
+  href?: string;
 }) {
+  const count = (
+    <>
+      <span className="text-3xl font-bold tabular-nums">
+        {formatNumber(value)}
+      </span>
+      <span
+        className={
+          href
+            ? "inline-flex items-center gap-1 text-base font-semibold underline decoration-2 underline-offset-4 decoration-(--wind-ink0) group-hover:text-(--wind-ink0)"
+            : "text-muted-foreground"
+        }
+      >
+        {unit}
+        {href && <ArrowUpRightIcon className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />}
+      </span>
+    </>
+  );
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4 border-b-2 border-foreground pb-5">
       <h2 className="text-6xl leading-[0.85] font-extrabold tracking-tighter sm:text-8xl">
         {children}
       </h2>
-      <p className="flex items-baseline gap-3 text-sm">
-        <span className="text-3xl font-bold tabular-nums">
-          {formatNumber(value)}
-        </span>
-        <span className="text-muted-foreground">{unit}</span>
-      </p>
+      {href ? (
+        <a href={href} className="group flex items-baseline gap-3 text-sm">
+          {count}
+        </a>
+      ) : (
+        <p className="flex items-baseline gap-3 text-sm">{count}</p>
+      )}
     </div>
   );
 }
@@ -98,11 +120,17 @@ export default function Home() {
               <div className="relative overflow-hidden">
                 <HeroField fieldFrom="wind-field-top" />
                 <div className="pointer-events-none relative mx-auto max-w-7xl px-4 pt-28 sm:px-6 sm:pt-32">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Move the pointer through the field to sway the stems.
-                  </p>
-                  <h1 className="mt-5 max-w-5xl text-[clamp(2.6rem,7.5vw,6.5rem)] leading-[0.92] font-extrabold tracking-tighter">
-                    {site.tagline}
+                  <h1 className="max-w-5xl text-[clamp(2.6rem,7.5vw,6.5rem)] leading-[0.92] font-extrabold tracking-tighter">
+                    {taglineParts.map((part, i) => {
+                      const accent = (site.taglineAccents as readonly string[]).indexOf(part);
+                      return accent < 0 ? (
+                        part
+                      ) : (
+                        <span key={i} style={{ color: slotVar(accent as Slot) }}>
+                          {part}
+                        </span>
+                      );
+                    })}
                   </h1>
                 </div>
                 <div
@@ -185,7 +213,7 @@ export default function Home() {
               id="tools"
               className="mx-auto max-w-7xl px-4 pb-24 sm:px-6"
             >
-              <SectionTitle value={tools.length} unit="open source tools">
+              <SectionTitle value={tools.length} unit="open source tools" href={site.github}>
                 Tools
               </SectionTitle>
               <div className="mt-10 grid gap-x-8 gap-y-14 md:grid-cols-2 lg:grid-cols-4">
@@ -218,10 +246,10 @@ export default function Home() {
                     <div className="mt-6">
                       {"image" in tool ? (
                         <Image
-                          src={tool.image}
+                          src={tool.image.src}
                           alt={`${tool.name} screenshot`}
-                          width={1421}
-                          height={876}
+                          width={tool.image.width}
+                          height={tool.image.height}
                           className="border border-foreground/15"
                         />
                       ) : (
@@ -246,6 +274,7 @@ export default function Home() {
               <SectionTitle
                 value={dataReleases.length}
                 unit="genotype releases"
+                href={site.dataverse}
               >
                 Data
               </SectionTitle>

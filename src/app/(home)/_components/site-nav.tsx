@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowUpRightIcon, MenuIcon, XIcon } from "lucide-react";
+import { MenuIcon, XIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { sections, site } from "@/content";
@@ -112,7 +112,7 @@ export function SiteNav() {
           <a
             href="#about"
             onClick={() => setOpen(false)}
-            className="flex shrink-0 items-center gap-2 rounded-lg px-2 py-1 text-sm font-bold tracking-tight"
+            className="flex shrink-0 items-center gap-2 p-1 text-sm font-bold tracking-tight"
           >
             <StemMark />
             {site.name}
@@ -149,13 +149,6 @@ export function SiteNav() {
 
           <div className="ml-auto flex items-center gap-1 sm:ml-0">
             <ThemeToggle />
-            <a
-              href={site.github}
-              className="hidden h-8 items-center gap-1 rounded-lg bg-foreground px-3 text-[13px] font-medium text-background transition-opacity hover:opacity-85 sm:inline-flex"
-            >
-              {site.githubLabel}
-              <ArrowUpRightIcon className="size-3.5" />
-            </a>
             <Button
               variant="ghost"
               size="icon"
@@ -197,13 +190,6 @@ export function SiteNav() {
                   {s.label}
                 </a>
               ))}
-              <a
-                href={site.github}
-                className="mt-1 flex h-10 items-center justify-center gap-1 rounded-lg bg-foreground text-sm font-medium text-background"
-              >
-                {site.githubLabel}
-                <ArrowUpRightIcon className="size-4" />
-              </a>
             </nav>
           </div>
         </div>
