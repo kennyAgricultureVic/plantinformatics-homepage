@@ -49,6 +49,6 @@ export type SectionId = (typeof sections)[number]["id"];
 export const funding = {
   // TODO: confirm exact funding acknowledgement wording and partner list with the team.
   acknowledgement:
-    "This work is supported by the Australian Grains Genebank Strategic Partnership, a joint investment between Agriculture Victoria and the Grains Research and Development Corporation (GRDC).",
+    "The Australian Grains Genebank (AGG) Strategic Partnership is a $30M joint investment between the Victorian State Government and the Grains Research and Development Corporation (GRDC) that aims to unlock the genetic potential of plant genetic resources for the benefit of Australian grain growers.",
   partners: ["Agriculture Victoria", "Grains Research and Development Corporation", "Australian Grains Genebank"],
 } as const;
