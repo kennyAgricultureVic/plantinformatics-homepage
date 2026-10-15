@@ -21,6 +21,7 @@ export const site = {
     { value: String(tools.length), label: "Open source tools" },
   ],
   github: "https://github.com/plantinformatics",
+  githubLabel: "GitHub",
 } as const;
 
 /**

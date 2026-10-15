@@ -3,14 +3,12 @@ import Image from "next/image";
 import { ArrowUpRightIcon } from "lucide-react";
 import { ImagePlaceholder } from "@/components/image-placeholder";
 import { PalettePicker, PaletteProvider } from "@/components/palette";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   dataReleases,
   formatDate,
   formatNumber,
   funding,
   news,
-  sections,
   site,
   standards,
   tools,
@@ -18,6 +16,7 @@ import {
 } from "@/content";
 import { HeroField, NewsField, ReleaseField } from "./_components/fields";
 import { Inks } from "./_components/inks";
+import { SiteNav } from "./_components/site-nav";
 import {
   ACCESSIONS_PER_STEM,
   cropTotals,
@@ -34,21 +33,6 @@ const newsKinds = [
   { kind: "data", label: "Data release, stem with an ear", slot: 0 as Slot },
   { kind: "tool", label: "Tool release, stem with a pod", slot: 4 as Slot },
 ] as const;
-
-/** Three leaning stems, the mark in the header. */
-function StemMark() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden className="size-6">
-      <path
-        d="M5 22Q5 12 9 4M12 22Q12 13 16 6M19 22Q19 15 22 10"
-        fill="none"
-        stroke="var(--wind-ink0)"
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 /** The node on the news stem, matching the field: an ear for a data release, a pod for a tool release. */
 function NewsNode({ kind }: { kind: "tool" | "data" }) {
@@ -107,37 +91,13 @@ export default function Home() {
       className="flex flex-1 flex-col bg-background text-foreground"
     >
       <Inks>
-          <header className="sticky top-0 z-30 border-b border-foreground/10 bg-background/85 backdrop-blur">
-            <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
-              <a
-                href="#about"
-                className="flex shrink-0 items-center gap-2 font-bold tracking-tight"
-              >
-                <StemMark />
-                {site.name}
-              </a>
-              <nav className="ml-auto hidden gap-6 text-sm sm:flex">
-                {sections.map((s) => (
-                  <a
-                    key={s.id}
-                    href={`#${s.id}`}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    {s.label}
-                  </a>
-                ))}
-              </nav>
-              <div className="ml-auto flex sm:ml-0">
-                <ThemeToggle />
-              </div>
-            </div>
-          </header>
+          <SiteNav />
 
-          <main className="w-full [&>section]:scroll-mt-14">
+          <main className="w-full [&>section]:scroll-mt-20">
             <section id="about">
               <div className="relative overflow-hidden">
                 <HeroField fieldFrom="wind-field-top" />
-                <div className="pointer-events-none relative mx-auto max-w-7xl px-4 pt-14 sm:px-6 sm:pt-20">
+                <div className="pointer-events-none relative mx-auto max-w-7xl px-4 pt-28 sm:px-6 sm:pt-32">
                   <p className="text-sm font-medium text-muted-foreground">
                     Move the pointer through the field to sway the stems.
                   </p>
@@ -395,7 +355,7 @@ export default function Home() {
                     key={year}
                     className="grid gap-6 md:grid-cols-[10rem_minmax(0,1fr)]"
                   >
-                    <p className="text-7xl leading-none font-extrabold tracking-tighter text-(--wind-ink1) tabular-nums md:sticky md:top-20 md:self-start">
+                    <p className="text-7xl leading-none font-extrabold tracking-tighter text-(--wind-ink1) tabular-nums md:sticky md:top-24 md:self-start">
                       {year}
                     </p>
                     <ol className="ml-2.5 grid gap-10 border-l-2 border-(--wind-ink2) pb-2">
