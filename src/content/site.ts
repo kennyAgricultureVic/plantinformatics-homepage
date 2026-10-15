@@ -24,8 +24,7 @@ export const site = {
 } as const;
 
 /**
- * Canonical section anchors. Every design should render these ids so links like
- * `/designs/foo#tools` work the same across designs.
+ * Canonical section anchors on the homepage, so links like `/#tools` stay stable.
  */
 export const sections = [
   { id: "about", label: "About" },

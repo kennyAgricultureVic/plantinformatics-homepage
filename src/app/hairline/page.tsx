@@ -20,7 +20,7 @@ export default function HairlinePage() {
       <header className="flex items-center justify-between gap-4">
         <div>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-            Designs
+            Home
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight">Hairline figures</h1>
         </div>

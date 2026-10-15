@@ -3,12 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useInks } from "./inks";
-import { useWindLines } from "./wind-lines";
-import { windField, type Stem, type Streamline } from "./wind";
+import { windField, type Stem } from "./wind";
 
 type WindCanvasProps = {
   stems?: readonly Stem[];
-  lines?: readonly Streamline[];
   /** 0.2 is a breath, 1 the hero's gale. See windSpeed(). */
   speed: number;
   /** Seeds the weather. */
@@ -19,9 +17,8 @@ type WindCanvasProps = {
   rows?: number;
   /** Stroke width multiplier for stems. */
   weight?: number;
-  /** Streamline opacity and width. */
-  lineAlpha?: number;
-  lineWidth?: number;
+  /** Canvas width in CSS pixels at which every stem is drawn; narrower canvases draw an even share of them. */
+  fullAt?: number;
   /** Id of an element whose top edge is the top of the field: stems fill from there to the bottom. */
   fieldFrom?: string;
   /** Listen for the pointer on the parent element and blow a gust where it moves. */
@@ -37,20 +34,17 @@ const DAMPING = 5;
 const GUST_RADIUS = 110;
 
 /**
- * One canvas of field and weather. Stems are bent by the flow field at their base, streamlines
- * are traced through it. Grows once when scrolled into view, then sits still; a pointer gust
+ * One canvas of field. Stems are bent by the flow field at their base. Grows once when scrolled into view, then sits still; a pointer gust
  * runs a damped spring per stem and stops the loop as soon as every stem is back at rest.
  */
 export function WindCanvas({
   stems = [],
-  lines = [],
   speed,
   seed,
   stemHeight = 0.5,
   rows = 0.18,
   weight = 1,
-  lineAlpha = 0.55,
-  lineWidth = 1,
+  fullAt,
   gusty = false,
   fieldFrom,
   label,
@@ -62,7 +56,6 @@ export function WindCanvas({
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [visible, setVisible] = useState(false);
   const inks = useInks();
-  const showLines = useWindLines();
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -111,9 +104,11 @@ export function WindCanvas({
     const fieldH = marker ? h - fieldTop : h;
     const band = fieldH * rows;
     const tallest = fieldH * stemHeight;
-    // Narrow screens hold the same number of stems, so each one is drawn finer.
-    const fine = Math.min(1, Math.max(0.45, w / 1100));
-    const placed = stems
+    // Narrow screens keep an even share of the stems, so every crop strip thins alike. The share
+    // falls faster than the width because stems keep their height and lean over more of a narrow field.
+    const share = fullAt ? Math.min(1, w / fullAt) ** 1.5 : 1;
+    const shown = share < 1 ? stems.filter((_, i) => Math.floor((i + 1) * share) > Math.floor(i * share)) : stems;
+    const placed = shown
       .map((s) => {
         const x = s.x * w;
         const y = ground - (1 - s.depth) * band;
@@ -125,45 +120,17 @@ export function WindCanvas({
           py: y,
           height,
           lean: speed * 0.62 * wind.strength * Math.cos(wind.angle),
-          width: (0.55 + 0.75 * s.depth) * weight * fine,
+          width: (0.55 + 0.75 * s.depth) * weight,
           alpha: 0.45 + 0.55 * s.depth,
         };
       })
       .toSorted((a, b) => a.depth - b.depth);
-
-    // Streamlines traced with fixed steps; the wind runs faster where |w| is larger.
-    const traced = (showLines ? lines : []).map((l) => {
-      const points: number[] = [];
-      let x = l.x * w;
-      let y = l.y * h;
-      const steps = Math.round(l.length / 4);
-      for (let i = 0; i < steps && x < w + 20 && y > -20 && y < h + 20; i++) {
-        points.push(x, y);
-        const f = field(x, y);
-        const step = 2.5 + 2 * f.strength * speed;
-        x += Math.cos(f.angle) * step;
-        y += Math.sin(f.angle) * step * 0.6;
-      }
-      return { points, slot: l.slot };
-    });
 
     const angle = new Float32Array(placed.length);
     const velocity = new Float32Array(placed.length);
 
     const paint = (growth: number) => {
       ctx.clearRect(0, 0, w, h);
-
-      ctx.globalAlpha = lineAlpha;
-      ctx.lineWidth = lineWidth;
-      for (const line of traced) {
-        const n = Math.floor((line.points.length / 2) * Math.min(growth * 1.3, 1));
-        if (n < 2) continue;
-        ctx.strokeStyle = inks[line.slot];
-        ctx.beginPath();
-        ctx.moveTo(line.points[0], line.points[1]);
-        for (let i = 1; i < n; i++) ctx.lineTo(line.points[2 * i], line.points[2 * i + 1]);
-        ctx.stroke();
-      }
 
       for (let i = 0; i < placed.length; i++) {
         const s = placed[i];
@@ -283,7 +250,7 @@ export function WindCanvas({
       target?.removeEventListener("pointermove", onMove);
       target?.removeEventListener("pointerleave", onLeave);
     };
-  }, [size, visible, inks, showLines, stems, lines, speed, seed, stemHeight, rows, weight, lineAlpha, lineWidth, gusty, fieldFrom]);
+  }, [size, visible, inks, stems, speed, seed, stemHeight, rows, weight, fullAt, gusty, fieldFrom]);
 
   return (
     <div ref={wrapRef} className={cn("relative w-full", className)}>
