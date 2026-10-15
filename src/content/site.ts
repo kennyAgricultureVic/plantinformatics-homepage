@@ -10,12 +10,12 @@ export const site = {
   /** Phrases of the tagline a design may pick out in colour. */
   taglineAccents: ["digital tools", "genotype data"],
   summary:
-    "We are Agriculture Victoria, supporting the Australian grains industry through open digital tools and genotype data, with the Australian Grains Genebank (AGG) at the centre. As the largest agricultural genotyping effort in the world, we connect AGG data to past, present and future pre-breeding projects.",
-  goal: "Bridge the gap between bioinformatics and breeding, so industry can make decisions on data that is easy to access and use.",
+    "The AGG Strategic Partnership is connecting germplasm with genotype data, research knowledge and pre-breeding outcomes through an open ecosystem of interoperable data and digital tools. With the AGG at its centre, we are creating a pathway from diversity and data to knowledge and decision for Australia's grains industry.",
+  goal: "Making the genetic diversity held in the Australian Grains Genebank easier to discover, understand and translate into better breeding decisions.",
   objectives: [
-    "Release AGG genotype data publicly, anchored to documented reference assemblies",
-    "Build open source tools that make that data explorable without bioinformatics expertise",
-    "Keep datasets comparable by remapping markers as new genome assemblies arrive",
+    "Releasing AGG genotype data publicly, anchored to documented reference assemblies",
+    "Building open source tools that make that data explorable without bioinformatics expertise",
+    "Keeping datasets comparable by remapping markers as new genome assemblies arrive",
   ],
   stats: [
     { value: formatNumber(totalAccessions), label: "Genotypes released publicly" },
