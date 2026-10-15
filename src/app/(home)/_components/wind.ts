@@ -2,7 +2,7 @@
 // field of stems. Content decides how many stems there are, which crop they belong to and how
 // hard the wind blows in each section.
 
-import { crops, dataReleases, news, tools, totalAccessions, type Crop } from "@/content";
+import { crops, dataReleases, news, totalAccessions, type Crop } from "@/content";
 
 /** One stem per this many genotyped accessions. */
 export const ACCESSIONS_PER_STEM = 100;
@@ -55,9 +55,9 @@ export function valueNoise(seed: number) {
 }
 
 /** Length scale of the weather, in CSS pixels: one noise cell is this wide. */
-export const WAVELENGTH = 260;
+const WAVELENGTH = 260;
 /** How far the wind may veer from due east, in radians. */
-export const VEER = 0.85;
+const VEER = 0.85;
 
 /**
  * The flow field: θ(x, y) = VEER · (2·n₁(x/λ, y/λ) − 1), |w| = 0.55 + 0.9·n₂.
@@ -92,9 +92,6 @@ export type Slot = 0 | 1 | 2 | 3 | 4;
 
 /** A stem in unit coordinates: x across the field, depth 0 at the back row to 1 at the front. */
 export type Stem = { x: number; depth: number; h: number; slot: Slot; head: "ear" | "pod" };
-
-/** A streamline seed in unit coordinates, traced through the field for `length` CSS pixels. */
-export type Streamline = { x: number; y: number; length: number; slot: Slot };
 
 const cereals: readonly Crop[] = ["Wheat", "Barley"];
 
@@ -139,33 +136,11 @@ export const heroStems: Stem[] = (() => {
   });
 })();
 
-/** Streamlines across the hero sky and through the crop. */
-export const heroLines: Streamline[] = (() => {
-  const rand = mulberry32(hashSeed("hero-wind"));
-  return Array.from({ length: 70 }, (_, i) => ({
-    x: -0.15 + rand() * 0.9,
-    y: 0.04 + (0.9 * (i + rand())) / 70,
-    length: 260 + rand() * 520,
-    slot: 0 as Slot,
-  }));
-})();
-
-/** A drill row per release: same width for every row, so stem density is accessions. */
+/** A drill row per release: one stem per hundred accessions. */
 export const releaseRows = dataReleases.map((r) => {
   const rand = mulberry32(hashSeed(r.doi));
   const count = Math.round(r.accessions / ACCESSIONS_PER_STEM);
   return { release: r, stems: sow(count, 0, 1, slotOfCrop(r.crop), headOf(r.crop), rand) };
-});
-
-/** One gust of streamlines per tool, one line per capability, leaving from that tool's column. */
-export const toolLines: Streamline[] = tools.flatMap((tool, i) => {
-  const rand = mulberry32(hashSeed(tool.slug));
-  return tool.capabilities.map((_, j) => ({
-    x: i / tools.length + rand() * 0.06,
-    y: 0.15 + (0.7 * (j + rand() * 0.6)) / tool.capabilities.length,
-    length: 260 + rand() * 200,
-    slot: (i % 4) as Slot,
-  }));
 });
 
 const newsTimes = news.map((n) => Date.parse(n.date));
@@ -183,14 +158,3 @@ export const newsStems: Stem[] = news.map((n, i) => ({
   slot: n.kind === "data" ? 0 : 4,
   head: n.kind === "data" ? "ear" : "pod",
 }));
-
-/** Light breeze lines over the news stems, so the timeline sits in the same weather. */
-export const newsLines: Streamline[] = (() => {
-  const rand = mulberry32(hashSeed("news-wind"));
-  return Array.from({ length: 14 }, (_, i) => ({
-    x: -0.1 + rand() * 0.8,
-    y: 0.05 + (0.55 * (i + rand())) / 14,
-    length: 300 + rand() * 400,
-    slot: 2 as Slot,
-  }));
-})();

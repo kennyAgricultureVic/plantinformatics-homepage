@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { ArrowUpRightIcon } from "lucide-react";
@@ -17,30 +16,18 @@ import {
   tools,
   totalAccessions,
 } from "@/content";
-import {
-  HeroField,
-  NewsField,
-  ReleaseField,
-  ToolsWind,
-} from "./_components/fields";
+import { HeroField, NewsField, ReleaseField } from "./_components/fields";
 import { Inks } from "./_components/inks";
-import { WindLinesProvider, WindLinesToggle } from "./_components/wind-lines";
 import {
   ACCESSIONS_PER_STEM,
-  VEER,
-  WAVELENGTH,
   cropTotals,
   newsX,
   slotOfCrop,
   slotVar,
   totalStems,
-  windSpeed,
   type Slot,
 } from "./_components/wind";
 
-export const metadata: Metadata = { title: `Wind over a crop | ${site.name}` };
-
-const maxAccessions = Math.max(...dataReleases.map((r) => r.accessions));
 const newsYears = [...new Set(news.map((n) => n.date.slice(0, 4)))].toSorted();
 const newsYearsDesc = newsYears.toReversed();
 const newsKinds = [
@@ -85,7 +72,7 @@ function NewsNode({ kind }: { kind: "tool" | "data" }) {
   );
 }
 
-/** Section heading with its wind speed: a real data value, plotted on the same dial as the hero. */
+/** Section heading with the number behind it. */
 function SectionTitle({
   children,
   value,
@@ -95,34 +82,23 @@ function SectionTitle({
   value: number;
   unit: string;
 }) {
-  const speed = windSpeed(value);
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4 border-b-2 border-foreground pb-5">
       <h2 className="text-6xl leading-[0.85] font-extrabold tracking-tighter sm:text-8xl">
         {children}
       </h2>
-      <div className="w-full sm:w-72">
-        <p className="flex items-baseline justify-between gap-4 text-sm">
-          <span className="text-muted-foreground">Wind speed</span>
-          <span className="text-3xl font-bold tabular-nums">
-            {formatNumber(value)}
-          </span>
-        </p>
-        <p className="text-right text-sm text-muted-foreground">{unit}</p>
-        <div className="mt-2 h-1.5 bg-foreground/10" aria-hidden>
-          <div
-            className="h-full bg-(--wind-ink0)"
-            style={{ width: `${speed * 100}%` }}
-          />
-        </div>
-      </div>
+      <p className="flex items-baseline gap-3 text-sm">
+        <span className="text-3xl font-bold tabular-nums">
+          {formatNumber(value)}
+        </span>
+        <span className="text-muted-foreground">{unit}</span>
+      </p>
     </div>
   );
 }
 
-// Wind over a crop: a seeded flow field blowing across a field of stems. Every stem is a hundred
-// genotyped accessions, every section's wind speed is one of its own numbers.
-export default function WindDesign() {
+// A field of stems, one per hundred genotyped accessions, that sways under the pointer.
+export default function Home() {
   return (
     <PaletteProvider
       design="wind"
@@ -131,7 +107,6 @@ export default function WindDesign() {
       className="flex flex-1 flex-col bg-background text-foreground"
     >
       <Inks>
-        <WindLinesProvider>
           <header className="sticky top-0 z-30 border-b border-foreground/10 bg-background/85 backdrop-blur">
             <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
               <a
@@ -153,7 +128,6 @@ export default function WindDesign() {
                 ))}
               </nav>
               <div className="ml-auto flex sm:ml-0">
-                <WindLinesToggle />
                 <ThemeToggle />
               </div>
             </div>
@@ -164,13 +138,8 @@ export default function WindDesign() {
               <div className="relative overflow-hidden">
                 <HeroField fieldFrom="wind-field-top" />
                 <div className="pointer-events-none relative mx-auto max-w-7xl px-4 pt-14 sm:px-6 sm:pt-20">
-                  <p className="text-sm font-medium">
-                    <span className="text-(--wind-ink0)">
-                      Wind over a crop.
-                    </span>{" "}
-                    <span className="text-muted-foreground">
-                      Move the pointer through the field to raise a gust.
-                    </span>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Move the pointer through the field to sway the stems.
                   </p>
                   <h1 className="mt-5 max-w-5xl text-[clamp(2.6rem,7.5vw,6.5rem)] leading-[0.92] font-extrabold tracking-tighter">
                     {site.tagline}
@@ -190,7 +159,7 @@ export default function WindDesign() {
                     </strong>
                     , one for every {ACCESSIONS_PER_STEM} of the{" "}
                     {formatNumber(totalAccessions)} genotyped accessions, sown
-                    in a strip per crop and bent by the wind where they stand.
+                    in a strip per crop.
                   </p>
                   <ul className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-5">
                     {cropTotals.map((t) => (
@@ -247,21 +216,6 @@ export default function WindDesign() {
                         </div>
                       ))}
                     </dl>
-                    <div className="mt-10 border-2 border-foreground p-5">
-                      <h2 className="text-sm font-bold">The rule</h2>
-                      <div className="mt-3 grid gap-1.5 text-lg tabular-nums">
-                        <p>θ(x, y) = {VEER} · (2 n(x ⁄ λ, y ⁄ λ) − 1)</p>
-                        <p>lean = v · |w| · cos θ</p>
-                        <p>stems = accessions ⁄ {ACCESSIONS_PER_STEM}</p>
-                      </div>
-                      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                        n is seeded value noise with λ = {WAVELENGTH} px, so the
-                        same content always raises the same weather. Wind speed
-                        v runs on a log scale from a breath for 4 tools to a
-                        gale for {formatNumber(totalAccessions)} accessions;
-                        every section below names the number it blows at.
-                      </p>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -274,11 +228,7 @@ export default function WindDesign() {
               <SectionTitle value={tools.length} unit="open source tools">
                 Tools
               </SectionTitle>
-              <ToolsWind />
-              <p className="text-sm text-muted-foreground">
-                One streamline for each capability, leaving from its tool.
-              </p>
-              <div className="mt-8 grid gap-x-8 gap-y-14 md:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-10 grid gap-x-8 gap-y-14 md:grid-cols-2 lg:grid-cols-4">
                 {tools.map((tool, i) => (
                   <article
                     key={tool.slug}
@@ -341,8 +291,7 @@ export default function WindDesign() {
               </SectionTitle>
               <p className="mt-6 max-w-2xl text-muted-foreground">
                 Each release is a drill row of the same length with one stem per{" "}
-                {ACCESSIONS_PER_STEM} accessions, so a denser row is a bigger
-                release. Superseded releases are drawn faint: their accessions
+                {ACCESSIONS_PER_STEM} accessions. Superseded releases are drawn faint: their accessions
                 are counted again in the later release.
               </p>
               <ol className="mt-10 grid">
@@ -373,9 +322,7 @@ export default function WindDesign() {
                           {formatNumber(r.accessions)}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {superseded
-                            ? "superseded"
-                            : `row density ${Math.round((r.accessions / maxAccessions) * 100)}%`}
+                          {superseded ? "accessions, superseded" : "accessions"}
                         </p>
                         <a
                           href={r.doi}
@@ -503,7 +450,6 @@ export default function WindDesign() {
             </div>
           </footer>
           <PalettePicker />
-        </WindLinesProvider>
       </Inks>
     </PaletteProvider>
   );

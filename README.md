@@ -1,10 +1,10 @@
 # Plant Informatics homepage
 
-Design explorations for the organisation's front page. Each design is a route under `/designs/<slug>`; `/` lists them all.
+The organisation's front page, served at `/`. Earlier design explorations live on the `combined-previews` branch.
 
 ```bash
 bun install
 bun dev
 ```
 
-See `AGENTS.md` for structure and how to add a design. Page copy lives in `src/content/`.
+See `AGENTS.md` for structure. Page copy lives in `src/content/`.
